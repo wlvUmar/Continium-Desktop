@@ -5,6 +5,17 @@ Main entry point for the desktop app
 import sys
 import os
 from pathlib import Path
+
+# Add src directory to path for imports
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable
+    application_path = sys._MEIPASS
+else:
+    # Running as script
+    application_path = Path(__file__).parent
+
+sys.path.insert(0, str(application_path))
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QIcon
