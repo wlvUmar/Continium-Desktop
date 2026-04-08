@@ -1,0 +1,277 @@
+/* ============================================
+   HELP CENTER / FAQ MODAL STYLES
+   ============================================ */
+
+.hc-no-scroll {
+  overflow: hidden;
+}
+
+/* Overlay backdrop */
+.hc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.hc-overlay--visible {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Modal inner box */
+.hc-modal-inner {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 780px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+  animation: hcFadeIn 0.2s ease;
+}
+
+@keyframes hcFadeIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+/* Header row */
+.hc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 28px 20px;
+  flex-shrink: 0;
+}
+
+.hc-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #2d3e5b;
+  flex: 1;
+  text-align: center;
+}
+
+.hc-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #2d3e5b;
+  color: #fff;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.hc-close-btn:hover {
+  background: #1a2a40;
+}
+
+.hc-back-btn {
+  background: none;
+  border: none;
+  color: #2d3e5b;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.hc-back-btn:hover {
+  background: #f0f4f8;
+}
+
+/* FAQ list */
+.hc-list {
+  padding: 0 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.hc-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: #ffffff;
+  border: 1.5px solid #e8edf2;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+  width: 100%;
+}
+
+.hc-list-item:hover {
+  border-color: #00bcd4;
+  background: #f5feff;
+}
+
+.hc-list-text {
+  font-size: 17px;
+  font-weight: 700;
+  color: #2d3e5b;
+}
+
+.hc-list-arrow {
+  font-size: 24px;
+  color: #2d3e5b;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Slide view */
+.hc-modal-inner--slide {
+  max-width: 900px;
+}
+
+.hc-slide-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.hc-slide-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.hc-slide-img {
+  width: 100%;
+  height: auto;
+  max-height: calc(90vh - 160px);
+  object-fit: contain;
+  border-radius: 12px;
+  display: block;
+}
+
+/* Nav buttons */
+.hc-nav-btn {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #f0f4f8;
+  border: none;
+  font-size: 22px;
+  font-weight: 700;
+  color: #2d3e5b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.hc-nav-btn:hover {
+  background: #dce8f0;
+}
+
+.hc-nav-btn--placeholder {
+  background: transparent;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Dots pagination */
+.hc-slide-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 0 20px;
+  flex-shrink: 0;
+}
+
+.hc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d0d8e0;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.hc-dot--active {
+  background: #00bcd4;
+  transform: scale(1.3);
+}
+
+/* Dark mode */
+.dark-mode .hc-modal-inner {
+  background: #1e2235;
+}
+
+.dark-mode .hc-title {
+  color: #e0e8f0;
+}
+
+.dark-mode .hc-list-item {
+  background: #252a3d;
+  border-color: #333b55;
+}
+
+.dark-mode .hc-list-item:hover {
+  border-color: #00bcd4;
+  background: #1a2a35;
+}
+
+.dark-mode .hc-list-text {
+  color: #e0e8f0;
+}
+
+.dark-mode .hc-list-arrow {
+  color: #e0e8f0;
+}
+
+.dark-mode .hc-close-btn {
+  background: #3a4460;
+}
+
+.dark-mode .hc-close-btn:hover {
+  background: #4a5570;
+}
+
+.dark-mode .hc-back-btn {
+  color: #e0e8f0;
+}
+
+.dark-mode .hc-back-btn:hover {
+  background: #2a3045;
+}
+
+.dark-mode .hc-nav-btn {
+  background: #2a3045;
+  color: #e0e8f0;
+}
+
+.dark-mode .hc-nav-btn:hover {
+  background: #3a4460;
+}

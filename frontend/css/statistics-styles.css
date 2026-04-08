@@ -1,0 +1,284 @@
+/* ============================================
+   STATISTICS PAGE - Figma Design 1:1
+   ============================================ */
+
+.stats-page-container {
+    display: flex;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+/* Card Base */
+.stats-card {
+    flex: 1;
+    height: auto;
+    max-height: 600px;
+    background: #FFFFFF;
+    border: 0.5px solid #B7B7B7;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.25);
+    border-radius: 20px;
+    padding: 30px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.stats-card-title {
+    font-family: 'Inter';
+    font-size: 24px;
+    font-weight: 700;
+    color: #515C70;
+    margin: 0 0 20px 0;
+}
+
+/* Period Selector Tabs */
+.stats-period-tabs {
+    display: flex;
+    width: 100%;
+    height: 60px;
+    border: 2px solid #07B6D5;
+    border-radius: 10px;
+    background: #FFFFFF;
+    padding: 0;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.stats-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-right: 1px solid #07B6D5;
+    font-family: 'Inter';
+    font-size: 14px;
+    font-weight: 700;
+    color: #515C70;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.stats-tab-btn:last-child {
+    border-right: none;
+}
+
+.stats-tab-btn.active {
+    background: #009FBB;
+    color: #FFFFFF;
+}
+
+.stats-tab-btn:hover:not(.active) {
+    background: rgba(7, 182, 213, 0.08);
+}
+
+/* Date Navigator */
+.stats-date-navigator {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 40px;
+    margin-bottom: 20px;
+}
+
+.stats-date-arrow {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #515C70;
+    border-radius: 50%;
+    background: transparent;
+    color: #515C70;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.stats-date-arrow:hover {
+    background: rgba(81, 92, 112, 0.08);
+}
+
+.stats-date-arrow svg {
+    width: 14px;
+    height: 14px;
+}
+
+.stats-date-text {
+    font-family: 'Inter';
+    font-size: 14px;
+    font-weight: 500;
+    color: #515C70;
+    text-align: center;
+    flex: 1;
+    padding: 0 10px;
+}
+
+/* Total & Average Row */
+.stats-totals-row {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    height: 50px;
+    margin-bottom: 15px;
+}
+
+.stats-total-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.stats-label {
+    font-family: 'Inter';
+    font-size: 12px;
+    font-weight: 500;
+    color: #515C70;
+}
+
+.stats-value {
+    font-family: 'Inter';
+    font-size: 12px;
+    font-weight: 500;
+    color: #515C70;
+}
+
+/* Bar Chart */
+.stats-bar-chart-container {
+    width: 100%;
+    height: 180px;
+    background: #FFFFFF;
+    border: 0.3px solid #B7B7B7;
+    box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    padding: 15px;
+    box-sizing: border-box;
+    flex: 1;
+}
+
+.stats-bar-chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Donut Chart Container */
+.stats-donut-chart-container {
+    width: 100%;
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.stats-donut-chart-container canvas {
+    width: 120px !important;
+    height: 120px !important;
+}
+
+/* Project Progress */
+.stats-project-progress {
+    width: 100%;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.stats-project-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stats-project-name {
+    font-family: 'Inter';
+    font-size: 20px;
+    font-weight: 500;
+    color: #515C70;
+}
+
+.stats-project-time {
+    font-family: 'Inter';
+    font-size: 20px;
+    font-weight: 500;
+    color: #515C70;
+    text-align: right;
+}
+
+.stats-project-bar {
+    width: 100%;
+    height: 15px;
+    background: #DFDEE0;
+    border-radius: 30px;
+    overflow: hidden;
+}
+
+.stats-project-bar-fill {
+    height: 100%;
+    border-radius: 30px;
+    transition: width 0.3s ease;
+}
+
+/* Dark Mode */
+body.dark-mode .stats-card {
+    background: #1a1a2e;
+    border-color: #2a2a3e;
+}
+
+body.dark-mode .stats-card-title {
+    color: #e0e0e0;
+}
+
+body.dark-mode .stats-period-tabs {
+    background: #1a1a2e;
+    border-color: #07B6D5;
+}
+
+body.dark-mode .stats-tab-btn {
+    border-right-color: #07B6D5;
+    color: #e0e0e0;
+}
+
+body.dark-mode .stats-tab-btn.active {
+    background: #009FBB;
+    color: #FFFFFF;
+}
+
+body.dark-mode .stats-date-arrow {
+    border-color: #e0e0e0;
+    color: #e0e0e0;
+}
+
+body.dark-mode .stats-date-text {
+    color: #e0e0e0;
+}
+
+body.dark-mode .stats-label,
+body.dark-mode .stats-value {
+    color: #e0e0e0;
+}
+
+body.dark-mode .stats-bar-chart-container,
+body.dark-mode .stats-project-name,
+body.dark-mode .stats-project-time {
+    background: #1a1a2e;
+    border-color: #2a2a3e;
+    color: #e0e0e0;
+}
+
+/* Responsive */
+@media (max-width: 800px) {
+    .stats-page-container {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .stats-card {
+        width: 100%;
+        height: auto;
+    }
+}

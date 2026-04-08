@@ -1,0 +1,637 @@
+/* ============================================
+   TIMER COMPONENT - FIGMA DESIGN 1:1
+   ============================================ */
+
+/* Color Tokens */
+:root {
+  --timer-ring-track: #D9D9D9;
+  --timer-ring-fill: #07B6D5;
+  --timer-dot-bg: #07B6D5;
+  --timer-dot-border: #B7B7B7;
+  --timer-session-badge-bg: #D9D9D9;
+  --timer-text: #475A6C;
+  --timer-controls-bg: #07B6D5;
+  --timer-controls-icon: #FFFFFF;
+  --timer-exit-bg: #36465D;
+  --timer-session-bar-fill: #07B6D5;
+  --timer-session-bar-empty: #D9D9D9;
+  --timer-session-bar-border: #D7D6D6;
+}
+
+/* ============================================
+   EMBEDDED TIMER (Normal Page Mode)
+   — styles here are manually tuned, do not change
+   ============================================ */
+
+.timer-page-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  overflow: visible;
+  position: relative;
+}
+
+.timer-embedded-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.timer-project-name {
+  font-family: 'Inter', sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--timer-text);
+  text-align: center;
+  letter-spacing: -0.5px;
+  margin-bottom: 10px;
+}
+
+.timer-session-bar-container {
+  width: 100%;
+  max-width: 490px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.timer-session-info {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--timer-text);
+  text-align: center;
+  opacity: 0.9;
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
+}
+
+.timer-session-bar {
+  width: 100%;
+  height: 21px;
+  background: linear-gradient(
+    90deg,
+    var(--timer-session-bar-fill) 0%,
+    var(--timer-session-bar-fill) var(--progress-percent, 0%),
+    var(--timer-session-bar-empty) var(--progress-percent, 0%),
+    var(--timer-session-bar-empty) 100%
+  );
+  border: 1px solid var(--timer-session-bar-border);
+  border-radius: 50px;
+  transition: background 0.3s ease;
+}
+
+/* Ring wrapper */
+.timer-ring-wrapper,
+.focus-modal-ring-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 350px;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  margin: 20px auto;
+}
+
+.timer-ring-svg,
+.focus-ring-svg {
+  width: 100%;
+  height: 100%;
+  max-width: 520px;
+  max-height: 520px;
+  overflow: visible;
+  filter: drop-shadow(0px 2px 8px rgba(0, 0, 0, 0.08));
+}
+
+.timer-ring-circle,
+.focus-ring-circle {
+  fill: none;
+  stroke: var(--timer-ring-track);
+  stroke-width: 59px;
+  stroke-linecap: round;
+}
+
+.timer-ring-progress,
+.focus-ring-progress {
+  fill: none;
+  stroke: var(--timer-ring-fill);
+  stroke-width: 48px;
+  stroke-linecap: round;
+  stroke-dasharray: 1584;
+  stroke-dashoffset: 1584;
+  transform-origin: 50% 50%;
+  transform: rotate(-90deg);
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+/* Inner text block */
+.timer-inner-content,
+.focus-inner-content {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 259px;
+}
+
+.timer-status-label,
+.focus-status-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--timer-text);
+  text-align: center;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  height: 29px;
+}
+
+.timer-time-display,
+.focus-time-display {
+  font-family: 'Inter', sans-serif;
+  font-size: 80px;
+  font-weight: 700;
+  color: var(--timer-text);
+  text-align: center;
+  line-height: 1;
+  margin-bottom: 24px;
+  letter-spacing: -2px;
+}
+
+.timer-session-badge,
+.focus-session-badge {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  background: var(--timer-session-badge-bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--timer-text);
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Controls */
+.timer-controls-wrapper,
+.focus-modal-controls-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 80px;
+  margin-top: 10px;
+}
+
+.timer-control-btn,
+.focus-modal-control-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: var(--timer-controls-bg);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.15);
+  padding: 0;
+}
+
+.timer-control-btn:hover:not(:disabled),
+.focus-modal-control-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.timer-control-btn:active:not(:disabled),
+.focus-modal-control-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.timer-control-btn svg,
+.timer-control-btn img,
+.focus-modal-control-btn svg,
+.focus-modal-control-btn img {
+  width: 48px;
+  height: 48px;
+  filter: brightness(0) invert(1);
+}
+
+.timer-play-btn,
+.focus-modal-play-btn {
+  width: 70px;
+  height: 70px;
+  background: var(--timer-controls-bg);
+  box-sizing: border-box;
+}
+
+.timer-play-btn.paused,
+.focus-modal-play-btn.paused {
+  border-width: 0;
+}
+
+.timer-play-btn svg,
+.timer-play-btn img,
+.focus-modal-play-btn svg,
+.focus-modal-play-btn img {
+  width: 64px;
+  height: 64px;
+  fill: white;
+}
+
+/* ============================================
+   FULLSCREEN MODAL TIMER
+   All sizes are clamp(min, viewport-relative, max)
+   so the modal looks right on mobile → laptop → large TV.
+   The ring is keyed off vh (modal = 90vh).
+   Buttons are keyed off the smaller of vw/vh via vmin.
+   ============================================ */
+
+.timer-modal-overlay,
+.focus-modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.timer-modal-overlay.active,
+.focus-modal-overlay.active {
+  display: flex;
+}
+
+.timer-modal,
+.focus-modal {
+  position: relative;
+  width: 90vw;
+  height: 90vh;
+  max-width: 1400px;
+  max-height: 1000px;
+  background: #FFFFFF;
+  border: 3px solid #B7B7B7;
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.25);
+  border-radius: clamp(16px, 2vw, 30px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* padding scales: tight on small screens, roomy on big ones */
+  padding: clamp(44px, 6vh, 80px) clamp(20px, 3vw, 60px) clamp(20px, 3.5vh, 48px);
+  gap: 0;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Modal top-right controls */
+.timer-modal-controls,
+.focus-modal-controls {
+  position: absolute;
+  top: clamp(12px, 2vh, 24px);
+  right: clamp(12px, 2vw, 28px);
+  display: flex;
+  gap: clamp(6px, 1vw, 12px);
+}
+
+.timer-modal-btn,
+.focus-modal-btn {
+  /* scales from 36px on small screens up to 56px on large */
+  width:  clamp(36px, 5vmin, 56px);
+  height: clamp(36px, 5vmin, 56px);
+  border-radius: 50%;
+  background: var(--timer-exit-bg);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.timer-modal-btn:hover,
+.focus-modal-btn:hover {
+  background: #2d3647;
+  transform: scale(1.05);
+}
+
+.timer-modal-btn svg,
+.timer-modal-btn img,
+.focus-modal-btn svg,
+.focus-modal-btn img {
+  width:  clamp(14px, 2vmin, 22px);
+  height: clamp(14px, 2vmin, 22px);
+  stroke: #FFFFFF;
+  color: #FFFFFF;
+}
+
+/* accent-colored top button variant */
+.timer-modal-btn.timer-page-btn,
+.focus-modal-btn.timer-page-btn {
+  background: var(--timer-controls-bg);
+}
+
+/* Modal content column */
+.timer-modal-content,
+.focus-modal-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* gap scales: 4px mobile → 10px large screen */
+  gap: clamp(4px, 1vh, 10px);
+  width: 100%;
+}
+
+/* Project name */
+.timer-modal-project-name,
+.focus-modal-project-name {
+  font-family: 'Inter', sans-serif;
+  /* 18px mobile → 28px large screen */
+  font-size: clamp(18px, 3vh, 32px);
+  font-weight: 700;
+  color: var(--timer-text);
+  text-align: center;
+}
+
+/* Session time text */
+.timer-modal-session-info,
+.focus-modal-session-info {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(12px, 1.6vh, 18px);
+  font-weight: 700;
+  color: var(--timer-text);
+  text-align: center;
+  opacity: 0.9;
+}
+
+/* Session progress bar */
+.timer-modal-session-bar,
+.focus-modal-session-bar {
+  width: 100%;
+  max-width: clamp(260px, 55vw, 600px);
+  /* bar height scales too */
+  height: clamp(8px, 1.2vh, 16px);
+  background: linear-gradient(
+    90deg,
+    var(--timer-session-bar-fill) 0%,
+    var(--timer-session-bar-fill) var(--progress-percent, 0%),
+    var(--timer-session-bar-empty) var(--progress-percent, 0%),
+    var(--timer-session-bar-empty) 100%
+  );
+  border: 1px solid var(--timer-session-bar-border);
+  border-radius: 50px;
+  transition: background 0.3s ease;
+}
+
+/* ── Modal ring ──
+   Ring size = 38% of viewport height, min 200px, max 380px.
+   viewBox stays 520×520 so r="252" and stroke-dasharray remain valid;
+   the browser just scales the whole SVG to fill the wrapper.
+   ── */
+.timer-modal-ring-wrapper,
+.focus-modal-ring-wrapper {
+  position: relative;
+  width:  clamp(200px, 38vh, 380px);
+  height: clamp(200px, 38vh, 380px);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-modal-ring-wrapper .timer-ring-svg,
+.timer-modal-ring-wrapper .focus-ring-svg,
+.focus-modal-ring-wrapper .timer-ring-svg,
+.focus-modal-ring-wrapper .focus-ring-svg {
+  width: 100%;
+  height: 100%;
+  max-width: unset;
+  max-height: unset;
+  overflow: visible;
+  filter: drop-shadow(0px 2px 8px rgba(0, 0, 0, 0.08));
+}
+
+/* Stroke width in SVG units (viewBox=520).
+   At 380px render: 40 SVG units ≈ 29px visual — proportional.
+   At 200px render: 40 SVG units ≈ 15px visual — still readable. */
+.timer-modal-ring-wrapper .timer-ring-circle,
+.timer-modal-ring-wrapper .focus-ring-circle,
+.focus-modal-ring-wrapper .timer-ring-circle,
+.focus-modal-ring-wrapper .focus-ring-circle {
+  stroke-width: 40px;
+}
+
+.timer-modal-ring-wrapper .timer-ring-progress,
+.timer-modal-ring-wrapper .focus-ring-progress,
+.focus-modal-ring-wrapper .timer-ring-progress,
+.focus-modal-ring-wrapper .focus-ring-progress {
+  stroke-width: 40px;
+}
+
+/* Inner text — all clamp so it fills the ring at any size */
+.timer-modal-ring-wrapper .timer-inner-content,
+.timer-modal-ring-wrapper .focus-inner-content,
+.focus-modal-ring-wrapper .timer-inner-content,
+.focus-modal-ring-wrapper .focus-inner-content {
+  /* width tracks ring size */
+  width: clamp(110px, 22vh, 220px);
+}
+
+.timer-modal-ring-wrapper .timer-status-label,
+.timer-modal-ring-wrapper .focus-status-label,
+.focus-modal-ring-wrapper .timer-status-label,
+.focus-modal-ring-wrapper .focus-status-label {
+  font-size: clamp(9px, 1.2vh, 15px);
+  margin-bottom: clamp(4px, 0.8vh, 10px);
+  height: auto;
+}
+
+.timer-modal-ring-wrapper .timer-time-display,
+.timer-modal-ring-wrapper .focus-time-display,
+.focus-modal-ring-wrapper .timer-time-display,
+.focus-modal-ring-wrapper .focus-time-display {
+  /* time digits: 28px mobile → 56px large screen */
+  font-size: clamp(28px, 6vh, 60px);
+  margin-bottom: clamp(4px, 0.8vh, 10px);
+}
+
+.timer-modal-ring-wrapper .timer-session-badge,
+.timer-modal-ring-wrapper .focus-session-badge,
+.focus-modal-ring-wrapper .timer-session-badge,
+.focus-modal-ring-wrapper .focus-session-badge {
+  width:  clamp(18px, 2.5vh, 32px);
+  height: clamp(18px, 2.5vh, 32px);
+  font-size: clamp(10px, 1.4vh, 16px);
+}
+
+/* ── Modal controls ── */
+.timer-modal-controls-wrapper,
+.focus-modal-controls-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 3vw, 48px);
+  margin-top: clamp(6px, 1.2vh, 16px);
+}
+
+/* Reset / Next side buttons */
+.timer-modal-control-btn,
+.focus-modal-control-btn {
+  width:  clamp(40px, 7vmin, 72px);
+  height: clamp(40px, 7vmin, 72px);
+  border-radius: 50%;
+  background: var(--timer-controls-bg);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 0;
+}
+
+.timer-modal-control-btn:hover,
+.focus-modal-control-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0px 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.timer-modal-control-btn svg,
+.timer-modal-control-btn img,
+.focus-modal-control-btn svg,
+.focus-modal-control-btn img {
+  width:  clamp(16px, 3vmin, 30px);
+  height: clamp(16px, 3vmin, 30px);
+  filter: brightness(0) invert(1);
+}
+
+/* Play / Pause center button — larger than side buttons */
+.timer-modal-play-btn,
+.focus-modal-play-btn {
+  width:  clamp(60px, 11vmin, 110px);
+  height: clamp(60px, 11vmin, 110px);
+  background: var(--timer-controls-bg);
+  /* glow ring scales with button */
+  box-shadow: 0 0 0 clamp(6px, 1.2vmin, 14px) rgba(10, 115, 202, 0.25);
+  border: none;
+  box-sizing: border-box;
+}
+
+.timer-modal-play-btn.paused,
+.focus-modal-play-btn.paused {
+  box-shadow: none;
+}
+
+.timer-modal-play-btn svg,
+.timer-modal-play-btn img,
+.focus-modal-play-btn svg,
+.focus-modal-play-btn img {
+  width:  clamp(22px, 4.5vmin, 44px);
+  height: clamp(22px, 4.5vmin, 44px);
+  fill: white;
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+
+body.dark-mode .timer-ring-circle,
+body.dark-mode .focus-ring-circle {
+  stroke: #404050;
+}
+
+body.dark-mode .timer-time-display,
+body.dark-mode .focus-time-display,
+body.dark-mode .timer-status-label,
+body.dark-mode .focus-status-label,
+body.dark-mode .timer-session-info,
+body.dark-mode .focus-modal-session-info,
+body.dark-mode .timer-project-name,
+body.dark-mode .focus-modal-project-name,
+body.dark-mode .timer-modal-project-name,
+body.dark-mode .timer-modal-session-info {
+  color: #e0e0e0;
+}
+
+body.dark-mode .timer-session-badge,
+body.dark-mode .focus-session-badge {
+  background: #404050;
+  color: #e0e0e0;
+}
+
+body.dark-mode .timer-session-bar,
+body.dark-mode .timer-modal-session-bar,
+body.dark-mode .focus-modal-session-bar {
+  background: linear-gradient(
+    90deg,
+    var(--timer-session-bar-fill) 0%,
+    var(--timer-session-bar-fill) var(--progress-percent, 0%),
+    #404050 var(--progress-percent, 0%),
+    #404050 100%
+  );
+  border-color: #505060;
+}
+
+body.dark-mode .timer-modal,
+body.dark-mode .focus-modal {
+  background: #1a1a2e;
+  border-color: #404050;
+}
+
+/* ============================================
+   RESPONSIVE — embedded timer only
+   Modal scales automatically via clamp() above
+   ============================================ */
+
+@media (max-width: 768px) {
+  .timer-ring-wrapper {
+    width: 300px;
+    height: 300px;
+  }
+
+  .timer-time-display {
+    font-size: 48px;
+  }
+
+  .timer-controls-wrapper {
+    gap: 30px;
+  }
+
+  .timer-control-btn {
+    width: 100px;
+    height: 100px;
+  }
+
+  .timer-play-btn {
+    width: 140px;
+    height: 140px;
+    border-width: 24px;
+  }
+}

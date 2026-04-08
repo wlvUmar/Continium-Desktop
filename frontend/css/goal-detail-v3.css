@@ -1,0 +1,448 @@
+/* Goal Detail Page - Figma-Scaled Design */
+/* Scale: Figma 1920px → CSS scaled (×0.55 spacing, fonts per spec) */
+
+.goal-detail-container {
+    padding: 0 22px 40px 22px;
+    max-width: 1470px;
+    margin: 0 auto;
+}
+
+/* ============ PAGE TITLE ============ */
+.goal-detail-title {
+    font-size: 28px;
+    font-weight: 900;
+    color: #323E52;
+    margin-bottom: 28px;
+    line-height: 1.2;
+    font-family: 'Inter', sans-serif;
+}
+
+body.dark-mode .goal-detail-title {
+    color: #E0E0E0;
+}
+
+/* ============ PROGRESS CARD ============ */
+.progress-card {
+    width: 100%;
+    height: 66px;
+    background: #FFFFFF;
+    border: 0.5px solid #B7B7B7;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    margin-bottom: 28px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+body.dark-mode .progress-card {
+    background: #2d3142;
+    border-color: #404556;
+}
+
+/* Toggle Header */
+.toggle-header {
+    display: flex;
+    height: 33px;
+    width: 100%;
+    background: linear-gradient(90deg, #07B6D5 50%, #009FBB 50%);
+    border-bottom: 1px solid #009FBB;
+}
+
+.toggle-btn {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    color: #FFFFFF;
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+    transition: background 0.2s ease;
+}
+
+.toggle-btn:last-child {
+    border-right: none;
+}
+
+.toggle-btn.active {
+    background: rgba(0, 0, 0, 0.1);
+    border: 1.5px solid #FFFFFF;
+    border-right: 1px solid #FFFFFF;
+}
+
+.toggle-btn:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Progress Row */
+.progress-row {
+    flex: 1;
+    padding: 8px 11px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.time-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: #7D8594;
+    min-width: 35px;
+    font-family: 'Inter', sans-serif;
+}
+
+.progress-bar-container {
+    flex: 1;
+    height: 8px;
+    background: #DFDEE0;
+    border-radius: 50px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #07B6D5 0%, #DFDEE0 0%);
+    border-radius: 50px;
+    transition: background 0.3s ease;
+}
+
+.percentage-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #7D8594;
+    min-width: 30px;
+    text-align: right;
+    font-family: 'Inter', sans-serif;
+}
+
+body.dark-mode .time-label,
+body.dark-mode .percentage-label {
+    color: #B0B0B0;
+}
+
+/* ============ INSIGHTS CARD ============ */
+.insights-card {
+    width: 100%;
+    background: #FFFFFF;
+    border: 0.5px solid #B7B7B7;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    padding: 16px 22px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+body.dark-mode .insights-card {
+    background: #2d3142;
+    border-color: #404556;
+}
+
+.card-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #36465D;
+    margin: 0 0 14px 0;
+    font-family: 'Inter', sans-serif;
+}
+
+body.dark-mode .card-title {
+    color: #E0E0E0;
+}
+
+/* ============ PERIOD TABS ============ */
+.period-tabs {
+    width: 100%;
+    height: 28px;
+    border: 1.5px solid #07B6D5;
+    border-radius: 8px;
+    display: flex;
+    margin-bottom: 12px;
+}
+
+.period-tab {
+    flex: 1;
+    border: 0;
+    border-right: 1px solid #07B6D5;
+    background: transparent;
+    color: #7D8594;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s ease;
+}
+
+.period-tab:last-child {
+    border-right: 0;
+}
+
+.period-tab.active {
+    background: #009FBB;
+    color: #FFFFFF;
+    border-radius: 6px;
+}
+
+body.dark-mode .period-tab {
+    border-right-color: #07B6D5;
+}
+
+/* ============ DATE NAVIGATOR ============ */
+.date-navigator {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+/* Date range row with arrows */
+.date-navigator > .date-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    height: 32px;
+}
+
+.nav-arrow {
+    width: 22px;
+    height: 22px;
+    border: 2px solid #515C70;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.nav-arrow:hover {
+    opacity: 0.8;
+}
+
+.date-range {
+    font-size: 14px;
+    font-weight: 500;
+    color: #515C70;
+    text-align: center;
+    flex: 1;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Stats row */
+.date-navigator > .stats-row {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 24px;
+}
+
+.nav-stat {
+    display: flex;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #515C70;
+    font-family: 'Inter', sans-serif;
+}
+
+.nav-label {
+    opacity: 0.7;
+}
+
+.nav-value {
+    font-weight: 600;
+}
+
+body.dark-mode .nav-arrow {
+    border-color: #808080;
+    color: #B0B0B0;
+}
+
+body.dark-mode .date-range,
+body.dark-mode .nav-stat {
+    color: #B0B0B0;
+}
+
+/* ============ BAR CHART ============ */
+.bar-chart-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    flex-grow: 1;
+    margin-bottom: 12px;
+    position: relative;
+    min-height: 182px;
+}
+
+.chart-area {
+    width: 100%;
+    height: 182px;
+    border: 0.5px solid #B7B7B7;
+    border-radius: 8px;
+    padding: 12px 14px 0;
+    display: flex;
+    position: relative;
+    background: #FFFFFF;
+    box-sizing: border-box;
+}
+
+body.dark-mode .chart-area {
+    background: #2d3142;
+    border-color: #404556;
+}
+
+.grid-lines {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.grid-line {
+    flex: 1;
+    border-bottom: 1px solid #000;
+}
+
+.y-axis-labels {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 500;
+    color: #000;
+    opacity: 0.4;
+    font-family: 'Inter', sans-serif;
+}
+
+body.dark-mode .y-axis-labels {
+    color: #B0B0B0;
+}
+
+.bars-container {
+    display: flex;
+    gap: 21px;
+    align-items: flex-end;
+    justify-content: space-around;
+    width: 100%;
+    height: 100%;
+    padding: 0 8px;
+}
+
+/* ============ PLAY BUTTON ============ */
+.play-button {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    background: #07B6D5;
+    border: 0;
+    color: #FFFFFF;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 16px auto 0 auto;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.play-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(7, 182, 213, 0.4);
+}
+
+.play-button:active {
+    transform: scale(0.95);
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 768px) {
+    .goal-detail-container {
+        padding: 0 12px 30px 12px;
+    }
+
+    .goal-detail-title {
+        font-size: 20px;
+        margin-bottom: 20px;
+    }
+
+    .progress-card {
+        height: 60px;
+        margin-bottom: 20px;
+    }
+
+    .toggle-btn {
+        font-size: 14px;
+    }
+
+    .progress-row {
+        padding: 6px 8px;
+    }
+
+    .time-label, .percentage-label {
+        font-size: 9px;
+    }
+
+    .insights-card {
+        height: auto;
+        min-height: 300px;
+        padding: 12px 16px;
+    }
+
+    .card-title {
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+
+    .period-tabs {
+        height: 24px;
+        margin-bottom: 10px;
+    }
+
+    .period-tab {
+        font-size: 12px;
+    }
+
+    .date-navigator {
+        font-size: 12px;
+        margin-bottom: 8px;
+    }
+
+    .nav-stat {
+        font-size: 12px;
+    }
+
+    .chart-area {
+        height: 120px;
+        padding: 8px 10px 0;
+    }
+
+    .bars-container {
+        gap: 12px;
+    }
+
+    .play-button {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+        margin-top: 10px;
+    }
+}

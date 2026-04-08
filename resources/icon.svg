@@ -1,0 +1,5 @@
+<!-- Placeholder icon - Replace with actual app icon -->
+<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
+  <rect width="256" height="256" fill="#4a9eff" rx="40"/>
+  <text x="128" y="170" font-family="Arial" font-size="120" font-weight="bold" fill="white" text-anchor="middle">C</text>
+</svg>

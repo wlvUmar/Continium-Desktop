@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Continium - Goal Tracker</title>
+   <link rel="icon" href="/favicon.svg">
+    <script>
+      if (localStorage.getItem("theme") === "dark") {
+        document.documentElement.classList.add("dark-mode");
+      }
+    </script>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/auth-styles.css" />
+    <link rel="stylesheet" href="css/layout-styles.css" />
+    <link rel="stylesheet" href="css/goals-list-styles.css" />
+    <link rel="stylesheet" href="css/statistics-styles.css" />
+    <link rel="stylesheet" href="css/timer-styles.css" />
+    <link rel="stylesheet" href="css/goal-detail-v3.css" />
+    <link rel="stylesheet" href="css/help-center-styles.css" />
+  </head>
+  <body>
+    <!-- Apply dark-mode to body synchronously before first paint — document.body exists here -->
+    <script>
+      if (localStorage.getItem("theme") === "dark") {
+        document.body.classList.add("dark-mode");
+      }
+    </script>
+
+    <div id="app"></div>
+
+    <!-- Preload services as globals before module system -->
+    <script src="js/services/color-manager.js"></script>
+
+    <!-- Entry point — reorganized per issue #108 -->
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
