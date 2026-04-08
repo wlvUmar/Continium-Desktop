@@ -34,9 +34,7 @@ class ContiniumApp(QApplication):
         self.setApplicationVersion("1.0.0")
         self.setOrganizationName("Continium Team")
         
-        # Enable high DPI scaling
-        self.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling, True)
-        self.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
+        # Note: High DPI scaling is enabled by default in PyQt6/Qt6
         
         # Initialize components
         self.main_window = None
