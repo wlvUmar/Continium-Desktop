@@ -6,13 +6,10 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
 [![PyQt6](https://img.shields.io/badge/PyQt6-6.7-41CD52?style=flat)](https://www.riverbankcomputing.com/software/pyqt/)
-[![SQLite](https://img.shields.io/badge/SQLite-Local-003B57?style=flat&logo=sqlite&logoColor=white)](https://sqlite.org)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?style=flat)](https://www.sqlalchemy.org)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=flat&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-[![PyInstaller](https://img.shields.io/badge/PyInstaller-Standalone%20EXE-4B4B7A?style=flat)](https://pyinstaller.org)
-[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI%2FCD-2088FF?style=flat&logo=githubactions&logoColor=white)](https://github.com/features/actions)
 
-**[🌐 Web Version (MVP)](../Continium)** · [Roadmap](#roadmap) · [Getting Started](#quick-start)
+**[🌐 Web Version (MVP)](https://github.com/wlvUmar/Continium)** · [Roadmap](#roadmap) · [Getting Started](#quick-start)
 
 </div>
 
@@ -24,15 +21,15 @@ Continium Desktop is an offline-first goal and time tracking application. Create
 
 ---
 
-## Features (Sprint 1 ✅)
+## Features (Sprint 1 MVP)
 
 **Core Functionality**
-- ✅ Goal CRUD with one-time and repeating types (daily, weekly, monthly)
-- ✅ Time tracking with session logging
-- ✅ Stats aggregation by goal, type, or date range
-- ✅ Local SQLite database (100% offline)
+-  Goal CRUD with one-time and repeating types (daily, weekly, monthly)
+-  Time tracking with session logging
+-  Stats aggregation by goal, type, or date range
+-  Local SQLite database 
 
-**Desktop Integration** *(Sprint 2 🚀)*
+**Desktop Integration** *(Sprint 2 MPP)*
 - System tray application
 - Taskbar preview with project list
 - Quick timer start from taskbar
@@ -42,7 +39,6 @@ Continium Desktop is an offline-first goal and time tracking application. Create
 
 **UI/UX**
 - Zero-build Vanilla JS SPA (shared with web version)
-- Hash-based routing
 - Responsive desktop-optimized layout
 - Toast notifications
 
@@ -53,12 +49,11 @@ Continium Desktop is an offline-first goal and time tracking application. Create
 | Layer | Technology |
 |---|---|
 | **Desktop Framework** | PyQt6 + WebEngine (Chromium) |
-| **Backend** | Python 3.11, synchronous SQLAlchemy |
-| **Frontend** | Vanilla JavaScript (ES6+), custom SPA router |
-| **Database** | SQLite (local, sync) |
+| **Backend** | Python SQLAlchemy |
+| **Frontend** | Vanilla JavaScript, custom SPA router |
+| **Database** | SQLite |
 | **ORM** | SQLAlchemy 2.0 |
 | **Build** | PyInstaller 6.19 → standalone EXE |
-| **CI/CD** | GitHub Actions (auto-build for Windows & macOS) |
 
 ---
 
@@ -146,31 +141,6 @@ See `.github/workflows/build.yml`
 
 ---
 
-## Roadmap
-
-### Sprint 1 ✅
-- [x] Project structure & setup
-- [x] Database models (User, Goal, Stats)
-- [x] DAL (CRUD operations)
-- [x] Basic UI (shared with web)
-- [x] CI/CD pipelines
-
-### Sprint 2 🚀 (Current)
-- [ ] System tray integration
-- [ ] Taskbar preview (project list + timer start)
-- [ ] On-screen overlay widget
-- [ ] Pomodoro timer (25min + breaks)
-- [ ] Desktop notifications
-- [ ] UI responsiveness for desktop
-
-### Sprint 3+
-- [ ] Goal templates
-- [ ] Analytics dashboard
-- [ ] Custom timer durations
-- [ ] Cloud sync (optional)
-- [ ] Multi-language support
-
----
 
 ## Relationship to Web Version
 
@@ -185,9 +155,6 @@ See `.github/workflows/build.yml`
 | **Deployment** | Windows/macOS EXE | Cloud (DigitalOcean) |
 | **UI** | **Shared** JavaScript code | **Shared** JavaScript code |
 
-**Frontend code is identical** — both versions use the same HTML/CSS/JavaScript UI codebase.
-
-👉 **[See Continium Web](../Continium)** for the full-featured cloud version.
 
 ---
 
