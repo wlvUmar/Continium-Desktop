@@ -11,7 +11,7 @@ from typing import List
 from sqlalchemy import Boolean, CheckConstraint, Date, Enum, ForeignKey, Integer, String, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..dal.base import Base
+from dal.base import Base
 
 
 class GoalFrequency(str, enum.Enum):

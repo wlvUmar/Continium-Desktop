@@ -6,7 +6,7 @@ from datetime import date
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select, update, delete
-from ..models.goal import Goal
+from models.goal import Goal
 
 
 def create_goal(db: Session, user_id: int, goal_data: dict) -> Goal:

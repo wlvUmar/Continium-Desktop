@@ -5,7 +5,7 @@ User DAL module (DB access only).
 from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import select, update as sa_update
-from ..models.user import User
+from models.user import User
 
 
 def get_by_id(db: Session, user_id: int) -> Optional[User]:

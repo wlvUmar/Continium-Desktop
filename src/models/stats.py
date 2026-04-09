@@ -9,7 +9,7 @@ from datetime import datetime
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..dal.base import Base
+from dal.base import Base
 
 
 class Stats(Base):
