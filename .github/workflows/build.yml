@@ -30,7 +30,7 @@ jobs:
     
     - name: Build Windows executable
       run: |
-        pyinstaller --name=Continium --windowed --onefile --icon=resources/icon.ico --add-data "frontend;frontend" --add-data "resources;resources" src/main.py
+        pyinstaller --name=Continium --windowed --onefile --icon=resources/icon.ico --add-data "src/interface;interface" --add-data "resources;resources" src/main.py
     
     - name: Create NSIS installer
       run: |
@@ -77,7 +77,7 @@ jobs:
     
     - name: Build macOS app
       run: |
-        pyinstaller --name=Continium --windowed --onefile --icon=resources/icon.icns --add-data "frontend:frontend" --add-data "resources:resources" src/main.py
+        pyinstaller --name=Continium --windowed --onefile --icon=resources/icon.icns --add-data "src/interface:interface" --add-data "resources:resources" src/main.py
     
     - name: Create DMG
       run: |

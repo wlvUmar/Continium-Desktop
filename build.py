@@ -34,7 +34,7 @@ class Builder:
             "--windowed",
             "--onefile",
             "--icon=resources/icon.ico",
-            f"--add-data=frontend{os.pathsep}frontend",
+            f"--add-data=src/interface{os.pathsep}interface",
             f"--add-data=resources{os.pathsep}resources",
             "src/main.py"
         ]
@@ -53,7 +53,7 @@ class Builder:
             "--windowed",
             "--onefile",
             "--icon=resources/icon.icns",
-            f"--add-data=frontend:frontend",
+            f"--add-data=src/interface:interface",
             f"--add-data=resources:resources",
             "src/main.py"
         ]

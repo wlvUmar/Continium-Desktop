@@ -1,1 +1,2 @@
-"""Empty __init__ to make src a package"""
+"""Continium Desktop application package."""
+

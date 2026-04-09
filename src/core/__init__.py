@@ -1,1 +1,2 @@
-"""Core application components"""
+"""Core application modules."""
+
