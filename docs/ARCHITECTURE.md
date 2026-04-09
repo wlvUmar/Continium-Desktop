@@ -82,9 +82,18 @@ graph LR
     NOTIF["notifications.py\nNative notifications\nEvent callbacks"]
   end
 
-  subgraph DATA["data/"]
-    DAL_MODELS["models/\nUser, Goal, Stats\n(SQLAlchemy ORM)"]
-    DAL["dal/\nData access layer\nUser, Goal, Stats queries"]
+  subgraph DATA["dal/"]
+    SESSION["session.py\nSync engine\nSessionLocal factory"]
+    BASE["base.py\nDeclarativeBase\nORM foundation"]
+    USER_DAL["user.py\nUser queries"]
+    GOAL_DAL["goal.py\nGoal CRUD + filtering"]
+    STATS_DAL["stats.py\nStats logging"]
+  end
+
+  subgraph MODELS["models/"]
+    USER_MODEL["user.py\nUser ORM"]
+    GOAL_MODEL["goal.py\nGoal ORM"]
+    STATS_MODEL["stats.py\nStats ORM"]
   end
 
   subgraph BRIDGE["utils/"]
@@ -94,9 +103,9 @@ graph LR
   APP --> TRAY & OVERLAY
   TRAY --> SERVICES
   OVERLAY --> SERVICES
-  SERVICES --> DATA
+  SERVICES --> DATA & MODELS
+  DATA --> MODELS
   SERVICES --> BRIDGE
-  DATA --> NOTIF
 ```
 
 ### 2.2 JavaScript Frontend Layer

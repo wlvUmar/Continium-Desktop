@@ -79,9 +79,16 @@ Continium-Desktop/
 │   │   ├── stats.py                   # Stats logging + aggregation
 │   │   └── __init__.py
 │   │
+│   ├── dal/                            # Data Access Layer + Session
+│   │   ├── session.py                 # Sync SQLAlchemy engine & SessionLocal
+│   │   ├── base.py                    # DeclarativeBase for models
+│   │   ├── user.py                    # User queries (login, password)
+│   │   ├── goal.py                    # Goal CRUD + filtering
+│   │   ├── stats.py                   # Stats logging + aggregation
+│   │   └── __init__.py
+│   │
 │   ├── utils/                          # Utilities
 │   │   ├── bridge.py                  # Python-JS communication
-│   │   ├── db.py                      # SQLAlchemy engine setup
 │   │   └── __init__.py
 │   │
 │   └── interface/                      # Frontend (shared with web)
