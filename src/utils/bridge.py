@@ -11,6 +11,7 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from services.event_emitter import EventEmitter
 
 DEFAULT_FORWARD_EVENTS = (
+    "app:ack",
     "timer:start",
     "timer:tick",
     "timer:pause",

@@ -8,6 +8,7 @@ import './core/router.js';
 import './services/auth.service.js';
 import './services/stats-manager.js';
 import './services/color-manager.js';
+import './services/bridge.service.js';
 
 // Core (depends on authService + router)
 import './core/route-protection.js';
