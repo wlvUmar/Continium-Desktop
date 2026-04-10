@@ -56,6 +56,7 @@ class AppController:
     def _wire_service_events(self) -> None:
         events = self._services.events
         sessions = self._services.sessions
+        events.on("app:ready", self._handle_app_ready)
         events.on("timer:start", lambda payload: self._start_session(sessions, payload))
         events.on("timer:pause", lambda _payload: sessions.pause())
         events.on("timer:resume", lambda _payload: sessions.resume())
@@ -63,6 +64,15 @@ class AppController:
 
     def _shutdown_services(self) -> None:
         self._services.timer.shutdown()
+
+    def _handle_app_ready(self, payload: dict[str, object]) -> None:
+        self._services.events.emit(
+            "app:ack",
+            {
+                "status": "connected",
+                "timestamp": payload.get("timestamp"),
+            },
+        )
 
     def _start_session(self, sessions: SessionManager, payload: dict[str, object]) -> None:
         goal_id = payload.get("goal_id")
