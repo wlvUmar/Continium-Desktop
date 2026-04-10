@@ -20,7 +20,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
-venv/
+.venv/
 env/
 ENV/
 
@@ -44,3 +44,6 @@ Thumbs.db
 *.app
 installer/
 REPORT_TEMPLATE.txt
+contribution_report.txt
+pyrightconfig.json
+.github/copilot-instructions.md
