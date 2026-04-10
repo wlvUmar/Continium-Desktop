@@ -26,12 +26,12 @@ class Builder:
         """Return a PyInstaller icon flag when the icon file exists."""
         if icon_path.exists():
             return [f"--icon={icon_path}"]
-        print(f"⚠️  Icon not found, building without it: {icon_path}")
+        print(f"Icon not found, building without it: {icon_path}")
         return []
 
     def build_windows(self):
         """Build Windows installer"""
-        print("🪟 Building Windows installer...")
+        print("Building Windows installer...")
 
         cmd = [
             "pyinstaller",
@@ -72,7 +72,7 @@ class Builder:
         dmg_path = self.dist_dir / "Continium.dmg"
 
         if not app_path.exists():
-            print("⚠️  App bundle not found, skipping DMG creation")
+            print("App bundle not found, skipping DMG creation")
             return
 
         cmd = [
