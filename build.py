@@ -17,11 +17,10 @@ class Builder:
         
     def clean(self):
         """Clean build artifacts"""
-        print("🧹 Cleaning build artifacts...")
+        print("Cleaning build artifacts...")
         for dir_path in [self.dist_dir, self.build_dir]:
             if dir_path.exists():
                 shutil.rmtree(dir_path)
-        print("✅ Clean complete")
     
     def build_windows(self):
         """Build Windows installer"""
@@ -40,11 +39,10 @@ class Builder:
         ]
         
         subprocess.run(cmd, check=True)
-        print("✅ Windows build complete")
     
     def build_macos(self):
         """Build macOS installer"""
-        print("🍎 Building macOS installer...")
+        print("Building macOS installer...")
         
         # PyInstaller command
         cmd = [
@@ -62,7 +60,6 @@ class Builder:
         
         # Create DMG
         self._create_dmg()
-        print("✅ macOS build complete")
     
     def _create_dmg(self):
         """Create DMG installer for macOS"""
@@ -83,9 +80,9 @@ class Builder:
         
         try:
             subprocess.run(cmd, check=True)
-            print(f"✅ DMG created: {dmg_path}")
+            print(f"DMG created: {dmg_path}")
         except subprocess.CalledProcessError:
-            print("⚠️  DMG creation failed")
+            print("DMG creation failed")
     
     def build(self, target_platform=None):
         """Build for specified platform"""
@@ -99,10 +96,10 @@ class Builder:
         elif target_platform == "darwin" or target_platform == "macos":
             self.build_macos()
         else:
-            print(f"❌ Unsupported platform: {target_platform}")
+            print(f"Unsupported platform: {target_platform}")
             sys.exit(1)
         
-        print(f"\n✨ Build complete! Check the dist/ folder")
+        print(f"\nBuild complete! Check the dist/ folder")
 
 
 if __name__ == "__main__":

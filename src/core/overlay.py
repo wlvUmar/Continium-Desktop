@@ -1,4 +1,3 @@
-"""Overlay and notification systems."""
 
 from __future__ import annotations
 

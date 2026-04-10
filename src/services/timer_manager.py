@@ -1,5 +1,3 @@
-"""Timer lifecycle management with background ticking."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -17,7 +15,6 @@ JOIN_TIMEOUT_SEC = 1
 
 @dataclass
 class TimerState:
-    """Snapshot of current timer state."""
 
     goal_id: int | None
     duration_seconds: int
@@ -27,7 +24,6 @@ class TimerState:
 
 
 class TimerManager:
-    """Manages timer start/pause/reset and emits events."""
 
     def __init__(self, events: EventEmitter) -> None:
         self._events = events
@@ -38,7 +34,6 @@ class TimerManager:
         self._reset_state()
 
     def start(self, goal_id: int, duration_minutes: int = DEFAULT_DURATION_MIN) -> bool:
-        """Start a timer if not already running."""
         self._validate_duration(duration_minutes)
         if not self._arm_timer(goal_id, duration_minutes):
             return False
@@ -47,38 +42,32 @@ class TimerManager:
         return True
 
     def pause(self) -> bool:
-        """Pause the running timer."""
         if not self._set_paused(True):
             return False
         self._events.emit("timer:pause", self._payload())
         return True
 
     def resume(self) -> bool:
-        """Resume a paused timer."""
         if not self._set_paused(False):
             return False
         self._events.emit("timer:resume", self._payload())
         return True
 
     def stop(self) -> None:
-        """Stop the timer without emitting completion."""
         if not self._mark_stopped():
             return
         self._stop_event.set()
 
     def reset(self, duration_minutes: int = DEFAULT_DURATION_MIN) -> None:
-        """Stop and reset timer to a new duration."""
         self.stop()
         self._reset_duration(duration_minutes)
 
     def shutdown(self) -> None:
-        """Stop and join the timer thread."""
         self.stop()
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=JOIN_TIMEOUT_SEC)
 
     def get_state(self) -> TimerState:
-        """Return a snapshot of timer state."""
         with self._lock:
             return TimerState(
                 goal_id=self._goal_id,
