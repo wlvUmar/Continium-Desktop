@@ -28,9 +28,10 @@ DEFAULT_FORWARD_EVENTS = (
 class _BridgeApi(QtCore.QObject):
     event_received = QtCore.pyqtSignal(str, dict)
 
-    @QtCore.pyqtSlot(str, dict)
-    def emit(self, event: str, data: dict[str, Any]) -> None:
-        self.event_received.emit(event, data)
+    @QtCore.pyqtSlot(str, "QVariant")
+    def emit(self, event: str, data: object) -> None:
+        payload = _normalize_payload(data)
+        self.event_received.emit(event, payload)
 
 
 class _DispatchProxy(QtCore.QObject):
@@ -81,4 +82,24 @@ def _build_js_event(event: str, payload: dict[str, Any]) -> str:
     event_json = json.dumps(event)
     payload_json = json.dumps(payload or {})
     return f"window.dispatchEvent(new CustomEvent({event_json}, {{ detail: {payload_json} }}));"
+
+
+def _normalize_payload(payload: object) -> dict[str, Any]:
+    if payload is None:
+        return {}
+    if isinstance(payload, dict):
+        return payload
+    if isinstance(payload, QtCore.QJsonValue):
+        return _json_object_to_dict(payload.toObject())
+    if isinstance(payload, QtCore.QJsonObject):
+        return _json_object_to_dict(payload)
+    if hasattr(payload, "toVariantMap"):
+        return dict(payload.toVariantMap())
+    raise TypeError(f"Unsupported payload type: {type(payload)}")
+
+
+def _json_object_to_dict(obj: QtCore.QJsonObject) -> dict[str, Any]:
+    if hasattr(obj, "toVariantMap"):
+        return dict(obj.toVariantMap())
+    return {}
 

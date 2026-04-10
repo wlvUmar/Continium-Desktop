@@ -24,7 +24,7 @@ class SystemTray:
         self._tray.show()
 
     def _load_icon(self) -> QIcon:
-        icon_path = Path(__file__).resolve().parents[1] / "resources" / "icon.svg"
+        icon_path = Path(__file__).resolve().parents[2] / "resources" / "icon.svg"
         if icon_path.exists():
             return QIcon(str(icon_path))
         return QIcon()
