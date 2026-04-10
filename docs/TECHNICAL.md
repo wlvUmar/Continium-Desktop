@@ -304,9 +304,14 @@ LOG_LEVEL=INFO
 
 ### Event Format
 
-All events use a **CustomEvent** with `detail` payload:
+Python emits events to the frontend using **CustomEvent** with a `detail` payload. The frontend sends events to Python via the QWebChannel object named `bridge` using `bridge.emit(event, data)`.
 
 ```javascript
+// JavaScript: Initialize QWebChannel once
+new QWebChannel(qt.webChannelTransport, (channel) => {
+    window.bridge = channel.objects.bridge;
+});
+
 // JavaScript: Listen for event
 window.addEventListener('timer:tick', (e) => {
     const { remaining_seconds } = e.detail;
@@ -314,26 +319,25 @@ window.addEventListener('timer:tick', (e) => {
 });
 
 // JavaScript: Emit to Python
-window.qt.webChannelTransport.send({
-    type: 'event',
-    name: 'timer:start',
-    data: { goal_id: 5, duration_minutes: 25 }
-});
+window.bridge.emit('timer:start', { goal_id: 5, duration_minutes: 25 });
 ```
 
 ```python
 # Python: Listen for event
 def on_timer_start(event_data):
-    goal_id = event_data['goal_id']
-    duration_minutes = event_data['duration_minutes']
+    goal_id = event_data["goal_id"]
+    duration_minutes = event_data["duration_minutes"]
     timer.start(goal_id, duration_minutes)
 
-bridge.on('timer:start', on_timer_start)
+events.on("timer:start", on_timer_start)
 
 # Python: Emit to JavaScript
-bridge.emit('timer:tick', {
-    'remaining_seconds': 1499,
-    'goal_id': 5
+events.emit("timer:tick", {
+    "remaining_seconds": 1499,
+    "duration_seconds": 1500,
+    "goal_id": 5,
+    "is_running": True,
+    "is_paused": False,
 })
 ```
 
@@ -344,7 +348,7 @@ bridge.emit('timer:tick', {
 | Event | Direction | Payload | Notes |
 |-------|-----------|---------|-------|
 | `timer:start` | JS → Py | `{goal_id, duration_minutes}` | User clicks "Start" |
-| `timer:tick` | Py → JS | `{remaining_seconds, elapsed_seconds}` | Every 100ms |
+| `timer:tick` | Py → JS | `{remaining_seconds, duration_seconds, goal_id, is_running, is_paused}` | Every 100ms |
 | `timer:pause` | JS → Py | `{}` | User pauses |
 | `timer:resume` | JS → Py | `{}` | User resumes |
 | `timer:reset` | JS → Py | `{}` | Abort current session |
@@ -534,37 +538,18 @@ class StatsDAL:
 
 ### Using PyQt6 WebChannel
 
-The app uses **PyQt6's WebChannel** to enable bidirectional communication between Python and JavaScript.
+The app uses **PyQt6's WebChannel** to enable bidirectional communication between Python and JavaScript via a single bridge object named `bridge`.
 
 **Setup (Python):**
 
 ```python
-# src/core/main_window.py
+# src/main.py
 
-from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebChannel import QWebChannel
-from src.utils.bridge import JSBridge
+from services import EventEmitter
+from utils.bridge import JSBridge
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        
-        # Create WebEngine
-        self.web_view = QWebEngineView()
-        self.setCentralWidget(self.web_view)
-        
-        # Setup WebChannel
-        self.channel = QWebChannel()
-        
-        # Create bridge
-        self.bridge = JSBridge()
-        self.channel.registerObject('bridge', self.bridge)
-        
-        # Attach channel to web view
-        self.web_view.page().setWebChannel(self.channel)
-        
-        # Load frontend
-        self.web_view.load(QUrl.fromLocalFile(str(INTERFACE_PATH / 'index.html')))
+events = EventEmitter()
+bridge = JSBridge(self._window.web_view, events)
 ```
 
 **Setup (JavaScript):**
@@ -574,13 +559,15 @@ class MainWindow(QMainWindow):
 
 <script src="qwebchannel.js"></script>
 <script>
-    // Wait for WebChannel to be ready
     new QWebChannel(qt.webChannelTransport, (channel) => {
         window.bridge = channel.objects.bridge;
-        
-        // Now we can call Python methods or listen to signals
-        window.bridge.timer_tick.connect((remaining) => {
-            console.log('Tick:', remaining);
+
+        // Send events to Python
+        window.bridge.emit('timer:start', { goal_id: 5, duration_minutes: 25 });
+
+        // Receive events from Python
+        window.addEventListener('timer:tick', (e) => {
+            console.log('Tick:', e.detail.remaining_seconds);
         });
     });
 </script>

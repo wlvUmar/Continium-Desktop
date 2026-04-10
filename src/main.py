@@ -1,5 +1,3 @@
-"""Main entry point for Continium Desktop application."""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -41,7 +39,6 @@ class AppController:
         self._wire_shutdown()
 
     def run(self) -> int:
-        """Show the main window and start the event loop."""
         self._window.show()
         return self._app.exec()
 

@@ -1,16 +1,11 @@
-"""Notification service wrapper."""
-
 from __future__ import annotations
-
 from PyQt6.QtWidgets import QSystemTrayIcon
-
 from services.event_emitter import EventEmitter
 
 DEFAULT_NOTIFICATION_TIMEOUT_MS = 5000
 
 
 class NotificationService:
-    """Shows notifications and emits UI events."""
 
     def __init__(
         self,
@@ -21,7 +16,6 @@ class NotificationService:
         self._tray = tray
 
     def show(self, title: str, message: str) -> None:
-        """Display a notification and emit event for the UI."""
         if self._tray and self._tray.supportsMessages():
             self._tray.showMessage(title, message, msecs=DEFAULT_NOTIFICATION_TIMEOUT_MS)
         if self._events:
