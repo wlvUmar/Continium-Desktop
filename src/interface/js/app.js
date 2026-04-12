@@ -38,6 +38,19 @@ import { initTimerView }          from './views/timer.view.js';
 import { initStatisticsView }     from './views/statistics.view.js';
 import { initPomodoroView }       from './views/pomodoro.view.js';
 
+// Shared password visibility toggle (used by login, register, reset-password templates)
+window.togglePassword = function(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const img   = btn.querySelector('img');
+    if (input.type === 'password') {
+        input.type = 'text';
+        img.src    = 'assets/icons/streamline-plump_invisible-2-remix.svg';
+    } else {
+        input.type = 'password';
+        img.src    = 'assets/icons/wpf_invisible.svg';
+    }
+};
+
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
     if (authService && authService.isAuthed()) {
