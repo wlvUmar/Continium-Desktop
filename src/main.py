@@ -16,8 +16,6 @@ from services import EventEmitter, NotificationService, PomodoroManager, Session
 from utils.bridge import JSBridge
 from utils.runtime import configure_runtime_logging
 
-MIN_GOAL_ID = 1
-
 
 @dataclass
 class AppServices:
@@ -29,8 +27,6 @@ class AppServices:
 
 
 class AppController:
-    """Creates and wires up the desktop application."""
-
     def __init__(self) -> None:
         self._logger = configure_runtime_logging()
         self._logger.info("Starting Continium desktop app")
@@ -101,8 +97,7 @@ class AppController:
         if goal_id is None or duration is None:
             self._logger.warning("Ignoring timer start payload: %s", payload)
             return
-        if int(goal_id) < MIN_GOAL_ID:
-            self._logger.warning("Rejected goal id %s from timer payload", goal_id)
+        if int(goal_id) < 1:
             return
         sessions.start(int(goal_id), int(duration))
 
@@ -130,7 +125,6 @@ def _env_bool(name: str, default: bool) -> bool:
 
 
 def main() -> None:
-    """Entry point."""
     controller = AppController()
     sys.exit(controller.run())
 

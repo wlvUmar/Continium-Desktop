@@ -2,11 +2,11 @@ name: Build Desktop Installers
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, dev ]
     tags:
       - 'v*'
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev ]
   workflow_dispatch:
 
 jobs:
@@ -30,13 +30,12 @@ jobs:
     
     - name: Build Windows executable
       run: |
-        pyinstaller --name=Continium --windowed --onefile --icon=resources/icon.ico --add-data "src/interface;interface" --add-data "resources;resources" src/main.py
+        python build.py --platform windows
     
     - name: Create NSIS installer
       run: |
         choco install nsis -y
         makensis installer/windows/installer.nsi
-      continue-on-error: true
     
     - name: Upload Windows artifacts
       uses: actions/upload-artifact@v4
@@ -45,7 +44,7 @@ jobs:
         path: |
           dist/Continium.exe
           dist/Continium-Setup.exe
-        if-no-files-found: warn
+        if-no-files-found: error
     
     - name: Create Release (on tag)
       if: startsWith(github.ref, 'refs/tags/v')
@@ -77,7 +76,7 @@ jobs:
     
     - name: Build macOS app
       run: |
-        pyinstaller --name=Continium --windowed --onefile --icon=resources/icon.icns --add-data "src/interface:interface" --add-data "resources:resources" src/main.py
+        python build.py --platform macos
     
     - name: Create DMG
       run: |
@@ -90,16 +89,20 @@ jobs:
           --app-drop-link 600 185 \
           "dist/Continium.dmg" \
           "dist/Continium.app"
-      continue-on-error: true
     
-    - name: Upload macOS artifacts
+    - name: Upload macOS app artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Continium-macOS
-        path: |
-          dist/Continium.app
-          dist/Continium.dmg
-        if-no-files-found: warn
+        name: Continium-macOS-app
+        path: dist/Continium.app
+        if-no-files-found: error
+
+    - name: Upload macOS DMG artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Continium-macOS-dmg
+        path: dist/Continium.dmg
+        if-no-files-found: error
     
     - name: Create Release (on tag)
       if: startsWith(github.ref, 'refs/tags/v')

@@ -69,6 +69,8 @@ git push origin feature/BE-2.4-timer-manager
 # - Add testing checklist
 ```
 
+Linked issues are also closed automatically after a merged PR targets `dev` and includes closing keywords in the PR body or commit messages.
+
 ### 4. Code Review & CI
 
 - **CI runs automatically:** `pytest` must pass
@@ -92,166 +94,6 @@ git merge --no-ff dev  # Creates merge commit
 git tag -a v2.0.0 -m "Sprint 2: Desktop features"
 git push origin main --tags
 ```
-
----
-
-## Code Standards
-
-### Python (Backend)
-
-**Structure:** Routes → Services → DAL → Models
-
-```python
-# Good: Clear separation of concerns
-# src/services/timer_manager.py
-
-from typing import Optional, List
-from dataclasses import dataclass
-
-@dataclass
-class TimerEvent:
-    """Emitted when timer state changes."""
-    timer_id: str
-    action: str  # "start", "pause", "complete"
-    remaining_seconds: int
-
-class TimerManager:
-    """Manages timer lifecycle and state.
-    
-    Responsibilities:
-    - Start/pause/stop/reset timers
-    - Track elapsed time
-    - Emit events for UI updates
-    """
-    
-    def start(self, goal_id: int, duration_minutes: int = 25) -> bool:
-        """Start timer for a goal.
-        
-        Args:
-            goal_id: ID of goal to track
-            duration_minutes: Timer duration (default: 25 for Pomodoro)
-        
-        Returns:
-            True if started, False if already running
-        
-        Raises:
-            ValueError: If duration < 1 or > 120
-        """
-        if not 1 <= duration_minutes <= 120:
-            raise ValueError(f"Duration must be 1-120, got {duration_minutes}")
-        
-        if self._is_running:
-            return False
-        
-        self._goal_id = goal_id
-        self._duration = duration_minutes * 60
-        self._elapsed = 0
-        self._is_running = True
-        
-        # Spawn background thread
-        self._thread = threading.Thread(target=self._tick_loop, daemon=True)
-        self._thread.start()
-        
-        return True
-```
-
-**Standards:**
-- Type hints on all functions: `def foo(x: int, y: str) -> bool:`
-- Docstrings in Google style (see above)
-- No magic numbers (use constants or config)
-- No commented-out code
-- Functions ≤ 20 lines (split if longer)
-- Cyclomatic complexity ≤ 5 (prefer early returns)
-
-**Imports order:**
-```python
-# Standard library
-import os
-import sys
-from typing import Optional
-
-# Third-party
-import sqlalchemy as sa
-
-# Local
-from src.models import User, Goal
-from src.dal import UserDAL
-```
-
-### JavaScript (Frontend)
-
-**Vanilla ES6+** — No frameworks, keep it light
-
-```javascript
-/**
- * TimerWidget - Displays a countdown timer
- * 
- * @param {Object} options - Configuration object
- * @param {number} options.duration - Duration in seconds
- * @param {Function} options.onComplete - Callback when timer reaches zero
- */
-class TimerWidget {
-    constructor(options) {
-        this.duration = options.duration || 1500; // 25 minutes
-        this.remaining = this.duration;
-        this.onComplete = options.onComplete;
-        this._interval = null;
-        this._element = null;
-    }
-    
-    /**
-     * Render timer UI and attach to DOM
-     * @returns {HTMLElement} The timer element
-     */
-    render() {
-        this._element = document.createElement('div');
-        this._element.className = 'timer-widget';
-        this._updateDisplay();
-        return this._element;
-    }
-    
-    /**
-     * Start the timer countdown
-     * @throws {Error} If timer already running
-     */
-    start() {
-        if (this._interval) {
-            throw new Error('Timer already running');
-        }
-        
-        this._interval = setInterval(() => {
-            this.remaining--;
-            this._updateDisplay();
-            
-            if (this.remaining <= 0) {
-                this.stop();
-                if (this.onComplete) this.onComplete();
-            }
-        }, 1000);
-    }
-    
-    /**
-     * Update timer display
-     * @private
-     */
-    _updateDisplay() {
-        const mins = Math.floor(this.remaining / 60);
-        const secs = this.remaining % 60;
-        this._element.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-    }
-}
-```
-
-**Standards:**
-- JSDoc comments on classes and public methods
-- camelCase for variables/functions
-- PascalCase for classes
-- const > let > var
-- No var outside special cases
-- Descriptive names (not `x`, `foo`, `temp`)
-- Keep functions ≤ 30 lines
-
----
 
 ## Testing
 
@@ -394,35 +236,6 @@ pytest
 python src/main.py
 ```
 
-### Pre-commit Hook (Optional but Recommended)
-
-```bash
-# Create .git/hooks/pre-commit
-#!/bin/bash
-pytest --quiet
-if [ $? -ne 0 ]; then
-    echo "Tests failed. Commit aborted."
-    exit 1
-fi
-```
-
----
-
-## Performance Guidelines
-
-- **Timer accuracy:** ±100ms per minute maximum
-- **UI response time:** < 100ms to user interaction
-- **Database queries:** < 50ms for 95th percentile
-- **App startup:** < 2 seconds
-- **Memory usage:** < 150MB idle
-
-**Profiling:**
-```python
-# Use cProfile for hot paths
-python -m cProfile -o results.prof src/main.py
-```
-
----
 
 ## Asking for Help
 
