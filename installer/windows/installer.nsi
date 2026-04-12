@@ -2,10 +2,11 @@
 ; This script creates a Windows installer using NSIS
 
 !include "MUI2.nsh"
+!define PROJECT_ROOT "${__FILEDIR__}\..\.."
 
 ; Basic settings
 Name "Continium"
-OutFile "dist\Continium-Setup.exe"
+OutFile "${PROJECT_ROOT}\dist\Continium-Setup.exe"
 InstallDir "$PROGRAMFILES\Continium"
 InstallDirRegKey HKCU "Software\Continium" "Install_Dir"
 
@@ -25,7 +26,7 @@ Section "Install"
   SetOutPath "$INSTDIR"
   
   ; Copy the executable
-  File "dist\Continium.exe"
+  File "${PROJECT_ROOT}\dist\Continium.exe"
   
   ; Create Start Menu shortcuts
   CreateDirectory "$SMPROGRAMS\Continium"
