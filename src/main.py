@@ -11,8 +11,8 @@ from core.overlay import OverlayManager
 from core.tray import SystemTray
 from core.window import MainWindow
 from dal import init_db
+from services.local_api import LocalApiService
 from services import EventEmitter, NotificationService, PomodoroManager, SessionManager, TimerManager
-from services.remote_api import RemoteApiService
 from utils.bridge import JSBridge
 from utils.runtime import configure_runtime_logging
 
@@ -36,16 +36,14 @@ class AppController:
         self._logger.info("Starting Continium desktop app")
         self._api_base_url = os.getenv("CONTINIUM_API_BASE_URL", "").strip() or None
         if self._api_base_url:
-            self._logger.info("Using remote API base URL: %s", self._api_base_url)
-        else:
-            self._logger.warning("CONTINIUM_API_BASE_URL is not set")
+            self._logger.info("Configured API base URL: %s", self._api_base_url)
         init_db()
         self._app = QApplication(sys.argv)
         self._app.setApplicationName("Continium")
         self._services = self._create_services()
         self._wire_service_events()
         self._window = MainWindow(api_base_url=self._api_base_url)
-        self._remote_api = RemoteApiService(self._api_base_url, self._logger)
+        self._local_api = LocalApiService()
         self._bridge = JSBridge(self._window.web_view, self._services.events, self._handle_api_request)
         self._tray = SystemTray(self._app, self._window)
         self._overlay = OverlayManager(self._services.events)
@@ -107,7 +105,7 @@ class AppController:
         headers: dict[str, Any],
     ) -> dict[str, Any]:
         self._logger.debug("Bridge API request %s %s", method, endpoint)
-        return self._remote_api.request(
+        return self._local_api.request(
             method=method,
             endpoint=endpoint,
             body=payload,

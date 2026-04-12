@@ -116,7 +116,7 @@ python src/main.py
 ```
 
 Runtime logs and tracebacks are written to `~/.continium/logs/continium.log`.
-Set `CONTINIUM_API_BASE_URL` to your remote backend, e.g. `https://example.com/api/v1`.
+Frontend API calls run through the PyQt bridge and are served by the local Python DAL.
 
 **Build standalone EXE:**
 ```bash
