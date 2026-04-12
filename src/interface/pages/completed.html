@@ -1,0 +1,14 @@
+<h1 class="page-title">Completed</h1>
+<div class="completed-filter-row" style="display:flex;align-items:center;gap:8px;margin-bottom:20px;">
+    <div class="insights-tabs">
+        <button class="tab-btn active" id="filterAll" onclick="setCompletedFilter('all', this)">All time</button>
+        <button class="tab-btn" id="filterWeek" onclick="setCompletedFilter('week', this)">Past week</button>
+    </div>
+    <button class="clear-all-btn" onclick="clearCompleted()" style="margin-left:auto;">Clear all</button>
+</div>
+<div id="completedContainer">
+    <div class="loading-state" style="text-align:center;padding:60px 0;">
+        <div class="spinner-large"></div>
+        <p style="margin-top:16px;color:#999;">Loading...</p>
+    </div>
+</div>

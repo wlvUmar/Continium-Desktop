@@ -1,0 +1,55 @@
+<div class="pomodoro-page">
+    <div class="page-header">
+        <h1>Pomodoro</h1>
+    </div>
+
+    <div class="pomodoro-card">
+        <!-- State tabs -->
+        <div class="pomodoro-tabs">
+            <button class="pomodoro-tab active" id="tabWork">Focus</button>
+            <button class="pomodoro-tab" id="tabShortBreak">Short Break</button>
+            <button class="pomodoro-tab" id="tabLongBreak">Long Break</button>
+        </div>
+
+        <!-- Timer ring -->
+        <div class="timer-ring-wrapper" style="margin: 32px auto;">
+            <svg class="timer-ring-svg" viewBox="0 0 520 520">
+                <circle class="timer-ring-circle" cx="260" cy="260" r="252" />
+                <circle id="pomodoroProgressArc" class="timer-ring-progress" cx="260" cy="260" r="252" />
+            </svg>
+            <div class="timer-inner-content">
+                <div class="timer-status-label" id="pomodoroStateLabel">FOCUS</div>
+                <div class="timer-time-display" id="pomodoroTimeDisplay">25 : 00</div>
+                <div class="timer-session-badge" id="pomodoroCycleBadge">1</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="timer-controls-wrapper">
+            <button class="timer-control-btn" title="Reset" onclick="window.pomodoroReset()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                </svg>
+            </button>
+
+            <button class="timer-play-btn timer-control-btn" id="pomodoroPlayBtn" title="Start / Pause" onclick="window.pomodoroToggle()">
+                <svg id="pomodoroPlayIcon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"></path>
+                </svg>
+            </button>
+
+            <button class="timer-control-btn" title="Skip" onclick="window.pomodoroSkip()">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                    <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Cycle info -->
+        <p class="pomodoro-cycle-info" id="pomodoroCycleInfo" style="text-align:center;color:#999;margin-top:16px;">
+            Cycle 1 · Focus session
+        </p>
+    </div>
+</div>

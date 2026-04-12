@@ -61,7 +61,8 @@ const statsManager = {
         }
         
         // Prevent fetching if unauthenticated
-        if (!localStorage.getItem('access_token')) {
+        const hasSession = !!(localStorage.getItem('session_token') || localStorage.getItem('access_token'));
+        if (!hasSession) {
 
             return { todayMinutes: 0, totalMinutes: 0, percentage: 0, stats: [] };
         }

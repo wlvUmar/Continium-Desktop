@@ -142,7 +142,7 @@ window.handleAddGoalSubmit = async function(event) {
             const goals = await goalsService.fetchGoals();
             const active = goals.filter(g => !g.is_complete && g.status !== 'completed');
             projectsContainer.innerHTML = createGoalsList(active);
-            _updateGoalsProgress(active);
+            if (window.updateGoalsProgress) updateGoalsProgress(active);
         }
     } catch (err) {
         const message = err.message || 'Failed to create goal';

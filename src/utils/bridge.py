@@ -11,6 +11,7 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from services.event_emitter import EventEmitter
 
 DEFAULT_FORWARD_EVENTS = (
+    "app:ack",
     "timer:start",
     "timer:tick",
     "timer:pause",
@@ -25,11 +26,24 @@ DEFAULT_FORWARD_EVENTS = (
 
 
 class _BridgeApi(QtCore.QObject):
-    event_received = QtCore.pyqtSignal(str, dict)
+    event_received = QtCore.pyqtSignal(str, "QVariant")
 
-    @QtCore.pyqtSlot(str, dict)
-    def emit(self, event: str, data: dict[str, Any]) -> None:
+    def __init__(self, request_handler: Callable[[str, str, dict[str, Any], dict[str, Any]], dict[str, Any]]) -> None:
+        super().__init__()
+        self._request_handler = request_handler
+
+    @QtCore.pyqtSlot(str, "QVariant")
+    def emit(self, event: str, data: Any) -> None:
         self.event_received.emit(event, data)
+
+    @QtCore.pyqtSlot(str, str, "QVariant", "QVariant", result="QVariant")
+    def request(self, method: str, endpoint: str, data: Any, headers: Any) -> dict[str, Any]:
+        return self._request_handler(
+            method,
+            endpoint,
+            _coerce_payload(data),
+            _coerce_payload(headers),
+        )
 
 
 class _DispatchProxy(QtCore.QObject):
@@ -51,11 +65,16 @@ class _DispatchProxy(QtCore.QObject):
 class JSBridge:
     """Bidirectional event bridge between Python and JS."""
 
-    def __init__(self, web_view: QWebEngineView, events: EventEmitter) -> None:
+    def __init__(
+        self,
+        web_view: QWebEngineView,
+        events: EventEmitter,
+        request_handler: Callable[[str, str, dict[str, Any], dict[str, Any]], dict[str, Any]],
+    ) -> None:
         self._events = events
         self._dispatcher = _DispatchProxy(web_view)
         self._channel = QtWebChannel.QWebChannel(web_view.page())
-        self._api = _BridgeApi()
+        self._api = _BridgeApi(request_handler)
         self._api.event_received.connect(self._on_event_received)
         self._channel.registerObject("bridge", self._api)
         web_view.page().setWebChannel(self._channel)
@@ -66,8 +85,8 @@ class JSBridge:
         for event in event_names:
             self._events.on(event, self._make_forwarder(event))
 
-    def _on_event_received(self, event: str, payload: dict[str, Any]) -> None:
-        self._events.emit(event, payload)
+    def _on_event_received(self, event: str, payload: Any) -> None:
+        self._events.emit(event, _coerce_payload(payload))
 
     def _make_forwarder(self, event: str) -> Callable[[dict[str, Any]], None]:
         def _forward(payload: dict[str, Any]) -> None:
@@ -80,4 +99,17 @@ def _build_js_event(event: str, payload: dict[str, Any]) -> str:
     event_json = json.dumps(event)
     payload_json = json.dumps(payload or {})
     return f"window.dispatchEvent(new CustomEvent({event_json}, {{ detail: {payload_json} }}));"
+
+
+def _coerce_payload(payload: Any) -> dict[str, Any]:
+    if isinstance(payload, dict):
+        return payload
+
+    to_variant = getattr(payload, "toVariant", None)
+    if callable(to_variant):
+        variant = to_variant()
+        if isinstance(variant, dict):
+            return variant
+
+    return {}
 
