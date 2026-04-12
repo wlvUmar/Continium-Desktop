@@ -23,10 +23,15 @@ class ApiError(Exception):
 class LocalApiService:
     """Implements the frontend API contract using local DAL modules."""
 
-    def __init__(self, remote_api_base_url: str | None, logger: logging.Logger) -> None:
+    def __init__(
+        self,
+        remote_api_base_url: str | None,
+        logger: logging.Logger,
+        verify_remote_auth_ssl: bool = True,
+    ) -> None:
         self._sessions: dict[str, int] = {}
         self._logger = logger
-        self._remote_auth = RemoteAuthApi(remote_api_base_url, logger)
+        self._remote_auth = RemoteAuthApi(remote_api_base_url, logger, verify_ssl=verify_remote_auth_ssl)
 
     def request(
         self,

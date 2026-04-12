@@ -15,9 +15,10 @@ class RemoteAuthApi:
 
     AUTH_PREFIX = "/auth/"
 
-    def __init__(self, base_url: str | None, logger: logging.Logger) -> None:
+    def __init__(self, base_url: str | None, logger: logging.Logger, verify_ssl: bool = True) -> None:
         self._base_url = (base_url or "").rstrip("/")
         self._logger = logger
+        self._verify_ssl = verify_ssl
 
     def enabled(self) -> bool:
         return bool(self._base_url)
@@ -47,6 +48,7 @@ class RemoteAuthApi:
                 json=body or None,
                 headers=req_headers,
                 timeout=REQUEST_TIMEOUT_SEC,
+                verify=self._verify_ssl,
             )
             payload = self._parse_payload(response)
             if response.ok:
