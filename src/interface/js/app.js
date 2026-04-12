@@ -1,11 +1,12 @@
-
-
 // Core
 import './core/api.js';
+import './core/template-loader.js';
+import './core/renderer.js';
 import './core/router.js';
 
 // Services
 import './services/auth.service.js';
+import './services/goals.service.js';
 import './services/stats-manager.js';
 import './services/color-manager.js';
 import './services/bridge.service.js';
@@ -18,35 +19,24 @@ import './components/toast.js';
 import './components/spinner.js';
 import './components/error-message.js';
 import './components/timer.js';
-
-// Shared layout (depends on router, authService, goalsService)
-// Note: goalsService is loaded later — layout functions that call it are
-// only invoked asynchronously after all modules have executed.
 import './components/layout.js';
+import './components/add-goal.js';
+import './components/profile.js';
+import './components/focus-modal.js';
+import './components/help-center.js';
 
-// Auth pages
-import './pages/auth/login.js';
-import './pages/auth/register.js';
-import './pages/auth/verify.js';
-import './pages/auth/forgot-password.js';
-import './pages/auth/reset-password.js';
-
-// App pages
-import './pages/dashboard.js';
-import './pages/goals.js';        // defines goalsService + renderProjects + renderCompleted
-import './pages/add-goal.js';
-import './pages/goal-detail.js';
-import './pages/timer.js';        // Timer page
-import './pages/profile.js';
-import './pages/statistics.js';
-
-// Global components
-import './components/focus-modal.js'; // Global focus modal (can open from anywhere)
-import './components/help-center.js'; // Help Center modal
-
-// Expose app container
-const appContainer = document.getElementById('app');
-window.appContainer = appContainer;
+// Views
+import { initLoginView }          from './views/login.view.js';
+import { initRegisterView }       from './views/register.view.js';
+import { initVerifyView }         from './views/verify.view.js';
+import { initForgotPasswordView } from './views/forgot-password.view.js';
+import { initResetPasswordView }  from './views/reset-password.view.js';
+import { initProjectsView }       from './views/projects.view.js';
+import { initCompletedView }      from './views/completed.view.js';
+import { initGoalDetailView }     from './views/goal-detail.view.js';
+import { initTimerView }          from './views/timer.view.js';
+import { initStatisticsView }     from './views/statistics.view.js';
+import { initPomodoroView }       from './views/pomodoro.view.js';
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
@@ -59,20 +49,20 @@ document.addEventListener('DOMContentLoaded', () => {
 // ROUTE REGISTRATIONS
 // ============================================
 
-router.on('/login',           () => renderLogin());
-router.on('/register',        () => renderRegister());
-router.on('/verify',          () => renderVerification());
-router.on('/forgot-password', () => renderForgotPassword());
-router.on('/reset-password',  () => renderResetPassword());
+router.on('/login',           () => renderer.render('pages/login.html',           initLoginView));
+router.on('/register',        () => renderer.render('pages/register.html',        initRegisterView));
+router.on('/verify',          () => renderer.render('pages/verify.html',          initVerifyView));
+router.on('/forgot-password', () => renderer.render('pages/forgot-password.html', initForgotPasswordView));
+router.on('/reset-password',  () => renderer.render('pages/reset-password.html',  initResetPasswordView));
 
-router.on('/app', protectedRoute(() => renderDashboard()));
+router.on('/app',        protectedRoute(() => router.navigate('/projects')));
+router.on('/projects',   protectedRoute(() => renderer.render('pages/projects.html',  initProjectsView,   {}, { layout: '/projects'  })));
+router.on('/statistics', protectedRoute(() => renderer.render('pages/statistics.html', initStatisticsView, {}, { layout: '/statistics' })));
+router.on('/completed',  protectedRoute(() => renderer.render('pages/completed.html',  initCompletedView,  {}, { layout: '/completed'  })));
+router.on('/pomodoro',   protectedRoute(() => renderer.render('pages/pomodoro.html',   initPomodoroView,   {}, { layout: '/pomodoro'   })));
 
-router.on('/projects',  protectedRoute(() => renderProjects()));
-router.on('/statistics',protectedRoute(() => renderStatistics()));
-router.on('/completed', protectedRoute(() => renderCompleted()));
-
-router.on('/goal/:id',    protectedRoute((params) => renderGoal(params.id)));
-router.on('/timer/:id',   protectedRoute((params) => renderTimerPage(params.id)));
+router.on('/goal/:id',  protectedRoute((params) => renderer.render('pages/goal-detail.html', initGoalDetailView, params, { layout: `/goal/${params.id}`  })));
+router.on('/timer/:id', protectedRoute((params) => renderer.render('pages/timer.html',       initTimerView,      params, { layout: `/timer/${params.id}` })));
 
 router.on('/', () => {
     if (authService && authService.isAuthed()) {
