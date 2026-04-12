@@ -9,6 +9,9 @@ on:
     branches: [ main, dev ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -31,6 +34,26 @@ jobs:
     - name: Build Windows executable
       run: |
         python build.py --platform windows
+
+    - name: Normalize Windows executable path
+      shell: pwsh
+      run: |
+        Set-Location $env:GITHUB_WORKSPACE
+        $primaryExe = Join-Path $env:GITHUB_WORKSPACE "dist\Continium.exe"
+        $fallbackExe = Join-Path $env:GITHUB_WORKSPACE "dist\Continium\Continium.exe"
+
+        if (Test-Path $primaryExe) {
+          Write-Host "Using Windows executable: $primaryExe"
+        } elseif (Test-Path $fallbackExe) {
+          Copy-Item $fallbackExe $primaryExe -Force
+          Write-Host "Copied fallback executable to: $primaryExe"
+        } else {
+          Write-Host "No Windows executable found in dist/. Current dist tree:"
+          if (Test-Path (Join-Path $env:GITHUB_WORKSPACE "dist")) {
+            Get-ChildItem -Path (Join-Path $env:GITHUB_WORKSPACE "dist") -Recurse -Force | ForEach-Object { Write-Host $_.FullName }
+          }
+          throw "Could not find Continium executable in dist output"
+        }
     
     - name: Create NSIS installer
       run: |
