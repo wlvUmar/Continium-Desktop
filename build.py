@@ -11,7 +11,7 @@ from pathlib import Path
 
 class Builder:
     def __init__(self):
-        self.root_dir = Path(__file__).parent
+        self.root_dir = Path(__file__).resolve().parent
         self.dist_dir = self.root_dir / "dist"
         self.build_dir = self.root_dir / "build"
 
@@ -25,43 +25,51 @@ class Builder:
     def _icon_arg(self, icon_path: Path) -> list[str]:
         """Return a PyInstaller icon flag when the icon file exists."""
         if icon_path.exists():
-            return [f"--icon={icon_path}"]
+            return [f"--icon={icon_path.resolve()}"]
         print(f"Icon not found, building without it: {icon_path}")
         return []
+
+    def _data_arg(self, source: Path, target: str) -> str:
+        """Format a PyInstaller data argument for the current platform."""
+        return f"{source.resolve()}{os.pathsep}{target}"
+
+    def _pyinstaller_cmd(self) -> list[str]:
+        """Return the PyInstaller invocation for the active interpreter."""
+        return [sys.executable, "-m", "PyInstaller"]
 
     def build_windows(self):
         """Build Windows installer"""
         print("Building Windows installer...")
 
         cmd = [
-            "pyinstaller",
+            *self._pyinstaller_cmd(),
             "--name=Continium",
             "--windowed",
             "--onefile",
             *self._icon_arg(self.root_dir / "resources" / "icon.ico"),
-            f"--add-data=src/interface{os.pathsep}interface",
-            f"--add-data=resources{os.pathsep}resources",
-            "src/main.py"
+            f"--add-data={self._data_arg(self.root_dir / 'src' / 'interface', 'interface')}",
+            f"--add-data={self._data_arg(self.root_dir / 'resources', 'resources')}",
+            str(self.root_dir / "src" / "main.py"),
         ]
 
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, cwd=self.root_dir)
 
     def build_macos(self):
         """Build macOS installer"""
         print("Building macOS installer...")
 
         cmd = [
-            "pyinstaller",
+            *self._pyinstaller_cmd(),
             "--name=Continium",
             "--windowed",
-            "--onefile",
+            "--onedir",
             *self._icon_arg(self.root_dir / "resources" / "icon.icns"),
-            f"--add-data=src/interface:interface",
-            f"--add-data=resources:resources",
-            "src/main.py"
+            f"--add-data={self._data_arg(self.root_dir / 'src' / 'interface', 'interface')}",
+            f"--add-data={self._data_arg(self.root_dir / 'resources', 'resources')}",
+            str(self.root_dir / "src" / "main.py"),
         ]
 
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, cwd=self.root_dir)
 
         # Create DMG
         self._create_dmg()
@@ -84,7 +92,7 @@ class Builder:
         ]
 
         try:
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, check=True, cwd=self.root_dir)
             print(f"DMG created: {dmg_path}")
         except subprocess.CalledProcessError:
             print("DMG creation failed")

@@ -69,6 +69,8 @@ git push origin feature/BE-2.4-timer-manager
 # - Add testing checklist
 ```
 
+Linked issues are also closed automatically after a merged PR targets `dev` and includes closing keywords in the PR body or commit messages.
+
 ### 4. Code Review & CI
 
 - **CI runs automatically:** `pytest` must pass

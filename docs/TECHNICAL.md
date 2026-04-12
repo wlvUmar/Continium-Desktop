@@ -605,7 +605,7 @@ python build.py --macos
 
 See `.github/workflows/build.yml`:
 
-1. **Trigger:** Every push to `main`
+1. **Trigger:** Every push to `main`/`dev`
 2. **Windows:** Run PyInstaller → Create NSIS installer → Upload .exe
 3. **macOS:** Run PyInstaller → Create .dmg → Upload .dmg
 4. **Artifacts:** Available in GitHub Actions "Artifacts" tab

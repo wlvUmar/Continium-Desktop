@@ -131,7 +131,7 @@ Output: `dist/Continium-Setup.exe`
 
 ## CI/CD
 
-GitHub Actions auto-builds on push to main/develop and on version tags (`v*`):
+GitHub Actions auto-builds on push to `main`/`dev` and on version tags (`v*`):
 
 - **Windows:** Builds `Continium-Setup.exe` (NSIS installer)
 - **macOS:** Builds `Continium.dmg` (DMG installer)
