@@ -12,8 +12,6 @@ from dal import init_db
 from services import EventEmitter, NotificationService, PomodoroManager, SessionManager, TimerManager
 from utils.bridge import JSBridge
 
-MIN_GOAL_ID = 1
-
 
 @dataclass
 class AppServices:
@@ -25,8 +23,6 @@ class AppServices:
 
 
 class AppController:
-    """Creates and wires up the desktop application."""
-
     def __init__(self) -> None:
         init_db()
         self._app = QApplication(sys.argv)
@@ -79,13 +75,12 @@ class AppController:
         duration = payload.get("duration_seconds")
         if goal_id is None or duration is None:
             return
-        if int(goal_id) < MIN_GOAL_ID:
+        if int(goal_id) < 1:
             return
         sessions.start(int(goal_id), int(duration))
 
 
 def main() -> None:
-    """Entry point."""
     controller = AppController()
     sys.exit(controller.run())
 

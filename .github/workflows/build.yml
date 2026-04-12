@@ -2,11 +2,11 @@ name: Build Desktop Installers
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, develop ]
     tags:
       - 'v*'
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
@@ -30,7 +30,7 @@ jobs:
     
     - name: Build Windows executable
       run: |
-        pyinstaller --name=Continium --windowed --onefile --icon=resources/icon.ico --add-data "src/interface;interface" --add-data "resources;resources" src/main.py
+        python build.py --platform windows
     
     - name: Create NSIS installer
       run: |
@@ -77,7 +77,7 @@ jobs:
     
     - name: Build macOS app
       run: |
-        pyinstaller --name=Continium --windowed --onefile --icon=resources/icon.icns --add-data "src/interface:interface" --add-data "resources:resources" src/main.py
+        python build.py --platform macos
     
     - name: Create DMG
       run: |
