@@ -4,17 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-import hashlib
-import hmac
-import secrets
+import logging
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from dal import SessionLocal
 from dal import goal as goal_dal
 from dal import stats as stats_dal
-from dal import user as user_dal
-from models.user import User
+from services.remote_auth_api import RemoteAuthApi
 
 
 @dataclass
@@ -26,9 +23,10 @@ class ApiError(Exception):
 class LocalApiService:
     """Implements the frontend API contract using local DAL modules."""
 
-    def __init__(self) -> None:
+    def __init__(self, remote_api_base_url: str | None, logger: logging.Logger) -> None:
         self._sessions: dict[str, int] = {}
-        self._reset_tokens: dict[str, int] = {}
+        self._logger = logger
+        self._remote_auth = RemoteAuthApi(remote_api_base_url, logger)
 
     def request(
         self,
@@ -51,25 +49,10 @@ class LocalApiService:
         path = parts.path.rstrip("/")
         query = parse_qs(parts.query)
 
-        if method == "POST" and path == "/auth/login":
-            return self._ok(self._auth_login(body))
-        if method == "POST" and path == "/auth/register":
-            return self._ok(self._auth_register(body))
-        if method == "POST" and path == "/auth/verify":
-            return self._ok({"status": "verified"})
-        if method == "POST" and path == "/auth/forgot-password":
-            return self._ok(self._auth_forgot_password(body))
-        if method == "POST" and path == "/auth/reset-password":
-            return self._ok(self._auth_reset_password(body))
+        if self._remote_auth.handles(path):
+            return self._handle_remote_auth(method, path, body, headers)
 
         user_id = self._require_user_id(headers)
-
-        if method == "GET" and path == "/auth/me":
-            return self._ok(self._auth_me(user_id))
-        if method == "PUT" and path == "/auth/me":
-            return self._ok(self._auth_update_me(user_id, body))
-        if method == "POST" and path == "/auth/change-password":
-            return self._ok(self._auth_change_password(user_id, body))
 
         if method == "GET" and path == "/goals":
             return self._ok(self._list_goals(user_id))
@@ -116,105 +99,67 @@ class LocalApiService:
             raise ApiError(401, "Missing authorization token")
         token = auth.split(" ", 1)[1].strip()
         user_id = self._sessions.get(token)
+        if user_id:
+            return user_id
+        user_id = self._resolve_remote_user_id(token, headers)
         if not user_id:
             raise ApiError(401, "Invalid or expired session")
+        self._sessions[token] = user_id
         return user_id
 
-    def _auth_login(self, body: dict[str, Any]) -> dict[str, Any]:
-        email = str(body.get("email", "")).strip().lower()
-        password = str(body.get("password", ""))
-        if not email or not password:
-            raise ApiError(400, "Email and password are required")
+    def _resolve_remote_user_id(self, token: str, headers: dict[str, str]) -> int | None:
+        if not self._remote_auth.enabled():
+            return None
+        forwarded_headers = dict(headers)
+        forwarded_headers["Authorization"] = f"Bearer {token}"
+        response = self._remote_auth.request("GET", "/auth/me", None, forwarded_headers)
+        if not response.get("ok"):
+            return None
+        data = response.get("data") or {}
+        user_id = data.get("id")
+        if isinstance(user_id, int):
+            return user_id
+        if isinstance(user_id, str) and user_id.isdigit():
+            return int(user_id)
+        return None
 
-        with SessionLocal() as db:
-            user = user_dal.get_by_email(db, email)
-            if not user or not self._verify_password(password, user.password_hash):
-                raise ApiError(401, "Invalid email or password")
-            token = self._issue_token(user.id)
-            return {"session_token": token, "user": self._serialize_user(user)}
+    def _handle_remote_auth(
+        self, method: str, path: str, body: dict[str, Any], headers: dict[str, str]
+    ) -> dict[str, Any]:
+        response = self._remote_auth.request(method, path, body, headers)
+        if not response.get("ok"):
+            return response
 
-    def _auth_register(self, body: dict[str, Any]) -> dict[str, Any]:
-        full_name = str(body.get("full_name", "")).strip()
-        email = str(body.get("email", "")).strip().lower()
-        password = str(body.get("password", ""))
-        if not full_name or not email or not password:
-            raise ApiError(400, "full_name, email and password are required")
-        if len(password) < 6:
-            raise ApiError(400, "Password must be at least 6 characters")
+        data = response.get("data")
+        if method == "POST" and path == "/auth/login":
+            return self._cache_login_session(response)
+        if method == "GET" and path == "/auth/me":
+            self._cache_current_session(headers, data)
+        return response
 
-        with SessionLocal() as db:
-            if user_dal.get_by_email(db, email):
-                raise ApiError(409, "Email already registered")
-            new_user = User(
-                full_name=full_name,
-                email=email,
-                password_hash=self._hash_password(password),
-                verified=True,
-                is_active=True,
-            )
-            created = user_dal.create(db, new_user)
-            return self._serialize_user(created)
+    def _cache_login_session(self, response: dict[str, Any]) -> dict[str, Any]:
+        data = response.get("data") or {}
+        token = data.get("session_token") or data.get("access_token")
+        user = data.get("user") if isinstance(data, dict) else None
+        user_id = user.get("id") if isinstance(user, dict) else None
+        if token and user_id:
+            try:
+                self._sessions[str(token)] = int(user_id)
+            except (TypeError, ValueError):
+                pass
+        return response
 
-    def _auth_me(self, user_id: int) -> dict[str, Any]:
-        with SessionLocal() as db:
-            user = user_dal.get_by_id(db, user_id)
-            if not user:
-                raise ApiError(404, "User not found")
-            return self._serialize_user(user)
-
-    def _auth_update_me(self, user_id: int, body: dict[str, Any]) -> dict[str, Any]:
-        allowed = {k: v for k, v in body.items() if k in {"full_name", "image_url"}}
-        if not allowed:
-            raise ApiError(400, "No updatable fields provided")
-        with SessionLocal() as db:
-            user = user_dal.update(db, user_id, allowed)
-            if not user:
-                raise ApiError(404, "User not found")
-            return self._serialize_user(user)
-
-    def _auth_change_password(self, user_id: int, body: dict[str, Any]) -> dict[str, Any]:
-        current = str(body.get("current_password", ""))
-        new_password = str(body.get("new_password", ""))
-        if not current or not new_password:
-            raise ApiError(400, "current_password and new_password are required")
-        if len(new_password) < 6:
-            raise ApiError(400, "Password must be at least 6 characters")
-        with SessionLocal() as db:
-            user = user_dal.get_by_id(db, user_id)
-            if not user or not self._verify_password(current, user.password_hash):
-                raise ApiError(401, "Current password is incorrect")
-            updated = user_dal.update(db, user_id, {"password_hash": self._hash_password(new_password)})
-            if not updated:
-                raise ApiError(404, "User not found")
-            return {"status": "ok"}
-
-    def _auth_forgot_password(self, body: dict[str, Any]) -> dict[str, Any]:
-        email = str(body.get("email", "")).strip().lower()
-        if not email:
-            raise ApiError(400, "Email is required")
-        with SessionLocal() as db:
-            user = user_dal.get_by_email(db, email)
-            if not user:
-                return {"status": "ok"}
-            token = secrets.token_urlsafe(24)
-            self._reset_tokens[token] = user.id
-            return {"status": "ok", "token": token}
-
-    def _auth_reset_password(self, body: dict[str, Any]) -> dict[str, Any]:
-        token = str(body.get("token", "")).strip()
-        new_password = str(body.get("new_password", ""))
-        if not token or not new_password:
-            raise ApiError(400, "token and new_password are required")
-        if len(new_password) < 6:
-            raise ApiError(400, "Password must be at least 6 characters")
-        user_id = self._reset_tokens.pop(token, None)
-        if not user_id:
-            raise ApiError(400, "Invalid or expired reset token")
-        with SessionLocal() as db:
-            updated = user_dal.update(db, user_id, {"password_hash": self._hash_password(new_password)})
-            if not updated:
-                raise ApiError(404, "User not found")
-            return {"status": "ok"}
+    def _cache_current_session(self, headers: dict[str, str], payload: Any) -> None:
+        auth = headers.get("Authorization", "")
+        if not auth.startswith("Bearer ") or not isinstance(payload, dict):
+            return
+        token = auth.split(" ", 1)[1].strip()
+        user_id = payload.get("id")
+        try:
+            if token and user_id is not None:
+                self._sessions[token] = int(user_id)
+        except (TypeError, ValueError):
+            return
 
     def _list_goals(self, user_id: int) -> list[dict[str, Any]]:
         with SessionLocal() as db:
@@ -325,39 +270,6 @@ class LocalApiService:
             return datetime.fromisoformat(value).date()
         except ValueError as exc:
             raise ApiError(400, f"Invalid date value: {value}") from exc
-
-    @staticmethod
-    def _hash_password(password: str) -> str:
-        salt = secrets.token_bytes(16)
-        digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 120_000)
-        return f"{salt.hex()}:{digest.hex()}"
-
-    @staticmethod
-    def _verify_password(password: str, stored_hash: str) -> bool:
-        try:
-            salt_hex, digest_hex = stored_hash.split(":", 1)
-            salt = bytes.fromhex(salt_hex)
-            expected = bytes.fromhex(digest_hex)
-        except ValueError:
-            return False
-        actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 120_000)
-        return hmac.compare_digest(actual, expected)
-
-    def _issue_token(self, user_id: int) -> str:
-        token = secrets.token_urlsafe(32)
-        self._sessions[token] = user_id
-        return token
-
-    @staticmethod
-    def _serialize_user(user: User) -> dict[str, Any]:
-        return {
-            "id": user.id,
-            "full_name": user.full_name,
-            "email": user.email,
-            "image_url": user.image_url,
-            "is_active": user.is_active,
-            "verified": user.verified,
-        }
 
     @staticmethod
     def _serialize_goal(goal: Any) -> dict[str, Any]:

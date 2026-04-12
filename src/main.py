@@ -43,7 +43,7 @@ class AppController:
         self._services = self._create_services()
         self._wire_service_events()
         self._window = MainWindow(api_base_url=self._api_base_url)
-        self._local_api = LocalApiService()
+        self._local_api = LocalApiService(self._api_base_url, self._logger)
         self._bridge = JSBridge(self._window.web_view, self._services.events, self._handle_api_request)
         self._tray = SystemTray(self._app, self._window)
         self._overlay = OverlayManager(self._services.events)
