@@ -1,4 +1,5 @@
-const API_BASE_URL = "http://localhost:8000/api/v1";
+const API_BASE_URL = window.continiumConfig?.apiBaseUrl || "http://localhost:8000/api/v1";
+
 function buildUrl(endpoint) {
   return `${API_BASE_URL}${endpoint}`;
 }
@@ -55,6 +56,7 @@ async function refreshAccessToken() {
 
 async function apiRequest(endpoint, options = {}) {
   const token = getAuthToken();
+  const skipRefresh = options.skipRefresh === true;
 
   const config = {
     method: options.method || "GET",
@@ -74,11 +76,10 @@ async function apiRequest(endpoint, options = {}) {
 
     // On 401, attempt a single token refresh then retry the original request.
     // The _isRetry flag prevents an infinite loop if the retry also gets a 401.
-    if (response.status === 401 && !options._isRetry) {
+    if (response.status === 401 && !options._isRetry && !skipRefresh) {
 
       try {
-        const newToken = await refreshAccessToken();
-
+        await refreshAccessToken();
       } catch (_refreshError) {
         // Refresh failed — clear session and redirect to login
         console.error(`❌ API: Token refresh failed:`, _refreshError);
@@ -123,21 +124,23 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 const api = {
-  get: (endpoint) => apiRequest(endpoint, { method: "GET" }),
+  get: (endpoint, options = {}) => apiRequest(endpoint, { method: "GET", ...options }),
 
-  post: (endpoint, data) =>
+  post: (endpoint, data, options = {}) =>
     apiRequest(endpoint, {
       method: "POST",
       body: data,
+      ...options,
     }),
 
-  put: (endpoint, data) =>
+  put: (endpoint, data, options = {}) =>
     apiRequest(endpoint, {
       method: "PUT",
       body: data,
+      ...options,
     }),
 
-  delete: (endpoint) => apiRequest(endpoint, { method: "DELETE" }),
+  delete: (endpoint, options = {}) => apiRequest(endpoint, { method: "DELETE", ...options }),
 };
 
 window.api = api;

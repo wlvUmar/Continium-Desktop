@@ -115,6 +115,9 @@ pip install -r requirements.txt
 python src/main.py
 ```
 
+Runtime logs and tracebacks are written to `~/.continium/logs/continium.log`.
+Set `CONTINIUM_API_BASE_URL` to your remote backend, e.g. `https://example.com/api/v1`.
+
 **Build standalone EXE:**
 ```bash
 python build.py --platform windows

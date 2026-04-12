@@ -55,16 +55,7 @@ const authService = {
         const refreshToken = localStorage.getItem('refresh_token');
         if (!refreshToken) return null;
 
-        // Use fetch directly to avoid triggering apiRequest's auto-refresh logic
-        const response = await fetch('/api/v1/auth/refresh', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: refreshToken })
-        });
-
-        if (!response.ok) return null;
-
-        const data = await response.json();
+        const data = await api.post('/auth/refresh', { refresh_token: refreshToken }, { skipRefresh: true });
         if (data && data.access_token) {
             localStorage.setItem('access_token', data.access_token);
             if (data.refresh_token) {

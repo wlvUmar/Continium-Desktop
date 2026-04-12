@@ -26,10 +26,10 @@ DEFAULT_FORWARD_EVENTS = (
 
 
 class _BridgeApi(QtCore.QObject):
-    event_received = QtCore.pyqtSignal(str, dict)
+    event_received = QtCore.pyqtSignal(str, "QVariant")
 
-    @QtCore.pyqtSlot(str, dict)
-    def emit(self, event: str, data: dict[str, Any]) -> None:
+    @QtCore.pyqtSlot(str, "QVariant")
+    def emit(self, event: str, data: Any) -> None:
         self.event_received.emit(event, data)
 
 
@@ -67,8 +67,8 @@ class JSBridge:
         for event in event_names:
             self._events.on(event, self._make_forwarder(event))
 
-    def _on_event_received(self, event: str, payload: dict[str, Any]) -> None:
-        self._events.emit(event, payload)
+    def _on_event_received(self, event: str, payload: Any) -> None:
+        self._events.emit(event, _coerce_payload(payload))
 
     def _make_forwarder(self, event: str) -> Callable[[dict[str, Any]], None]:
         def _forward(payload: dict[str, Any]) -> None:
@@ -81,4 +81,17 @@ def _build_js_event(event: str, payload: dict[str, Any]) -> str:
     event_json = json.dumps(event)
     payload_json = json.dumps(payload or {})
     return f"window.dispatchEvent(new CustomEvent({event_json}, {{ detail: {payload_json} }}));"
+
+
+def _coerce_payload(payload: Any) -> dict[str, Any]:
+    if isinstance(payload, dict):
+        return payload
+
+    to_variant = getattr(payload, "toVariant", None)
+    if callable(to_variant):
+        variant = to_variant()
+        if isinstance(variant, dict):
+            return variant
+
+    return {}
 

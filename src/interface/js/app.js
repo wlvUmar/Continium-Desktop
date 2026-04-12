@@ -1,4 +1,5 @@
 // Core
+import './core/config.js';
 import './core/api.js';
 import './core/template-loader.js';
 import './core/renderer.js';
