@@ -1,0 +1,70 @@
+<div class="goal-detail-container">
+    <!-- PAGE TITLE -->
+    <h1 class="goal-detail-title" id="goalDetailTitle">Loading...</h1>
+
+    <!-- PROGRESS BAR CARD -->
+    <div class="progress-card">
+        <div class="toggle-header">
+            <button class="toggle-btn active" onclick="window.switchProgressTab('today', this, event)">Today</button>
+            <button class="toggle-btn" onclick="window.switchProgressTab('total', this, event)">Total</button>
+        </div>
+        <div class="progress-row">
+            <div class="time-label" id="progressTimeLabel">0h 00m</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="percentage-label" id="percentageLabel">0%</div>
+        </div>
+    </div>
+
+    <!-- INSIGHTS CARD -->
+    <div class="insights-card">
+        <h2 class="card-title">Insights</h2>
+
+        <div class="period-tabs">
+            <button class="period-tab active" onclick="window.switchPeriod('week', this)">Week</button>
+            <button class="period-tab" onclick="window.switchPeriod('month', this)">Month</button>
+            <button class="period-tab" onclick="window.switchPeriod('3months', this)">3 Months</button>
+        </div>
+
+        <div class="date-navigator">
+            <div class="date-row">
+                <button class="nav-arrow" onclick="window.prevPeriod()">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M11 1L3 7L11 13" stroke="#515C70" stroke-width="2"/>
+                    </svg>
+                </button>
+                <div class="date-range" id="dateRange">This Week</div>
+                <button class="nav-arrow" onclick="window.nextPeriod()">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M3 1L11 7L3 13" stroke="#515C70" stroke-width="2"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="stats-row">
+                <div class="nav-stat">
+                    <span class="nav-label">Total:</span>
+                    <span class="nav-value" id="navTotal">0h</span>
+                </div>
+                <div class="nav-stat">
+                    <span class="nav-label">Avg:</span>
+                    <span class="nav-value" id="navAvg">0h</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bar-chart-container">
+            <div class="chart-area">
+                <div class="grid-lines" id="gridLines"></div>
+                <div class="y-axis-labels" id="yAxisLabels"></div>
+                <div class="bars-container" id="barsContainer"></div>
+            </div>
+        </div>
+
+        <button class="play-button" id="goalDetailPlayBtn" title="Start Timer">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
+        </button>
+    </div>
+</div>
