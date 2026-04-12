@@ -123,6 +123,7 @@ export async function initProjectsView() {
     return () => statsManager.stopPolling?.();
 }
 
-// Re-export helpers used by add-goal modal to refresh the list
-window.createGoalsList  = _createGoalsList;
-window.renderProjects   = () => renderer.render('pages/projects.html', initProjectsView, {}, { layout: '/projects' });
+// Expose helpers used by add-goal modal to refresh the list
+window.createGoalsList       = _createGoalsList;
+window.updateGoalsProgress   = _updateGoalsProgress;
+window.renderProjects        = () => renderer.render('pages/projects.html', initProjectsView, {}, { layout: '/projects' });
