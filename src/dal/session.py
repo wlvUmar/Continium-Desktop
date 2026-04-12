@@ -32,5 +32,8 @@ def get_db() -> Session:
 
 
 def init_db() -> None:
+    # Import ORM models so SQLAlchemy metadata includes all tables.
+    import models  # noqa: F401
+
     from .base import Base
     Base.metadata.create_all(bind=engine)

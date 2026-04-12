@@ -4,13 +4,19 @@
  */
 
 const authService = {
+    _tokenFromResponse(response) {
+        if (!response || typeof response !== 'object') return null;
+        return response.session_token || response.access_token || null;
+    },
+
     // Login user
     async login(email, password) {
         const response = await api.post('/auth/login', { email, password });
 
-        if (response.access_token) {
-            localStorage.setItem('access_token', response.access_token);
-            localStorage.setItem('refresh_token', response.refresh_token);
+        const token = this._tokenFromResponse(response);
+        if (token) {
+            localStorage.setItem('session_token', token);
+            localStorage.setItem('access_token', token);
 
             // Store user data if provided
             if (response.user) {
@@ -46,38 +52,18 @@ const authService = {
     // Logout
     logout() {
         localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('session_token');
         localStorage.removeItem('user');
     },
 
-    // Exchange a refresh token for a new access token
+    // Desktop auth does not use refresh tokens; keep method for compatibility.
     async refreshToken() {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (!refreshToken) return null;
-
-        // Use fetch directly to avoid triggering apiRequest's auto-refresh logic
-        const response = await fetch('/api/v1/auth/refresh', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: refreshToken })
-        });
-
-        if (!response.ok) return null;
-
-        const data = await response.json();
-        if (data && data.access_token) {
-            localStorage.setItem('access_token', data.access_token);
-            if (data.refresh_token) {
-                localStorage.setItem('refresh_token', data.refresh_token);
-            }
-        }
-
-        return data;
+        return null;
     },
 
     // Check if user is logged in
     isAuthed() {
-        return !!localStorage.getItem('access_token');
+        return !!(localStorage.getItem('session_token') || localStorage.getItem('access_token'));
     },
 
     // Get current user

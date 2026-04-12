@@ -1,121 +1,86 @@
-const API_BASE_URL = "http://localhost:8000/api/v1";
-function buildUrl(endpoint) {
-  return `${API_BASE_URL}${endpoint}`;
-}
+const CLIENT_HEADERS = {
+  "X-Continium-Client": "desktop",
+  "X-Auth-Mode": "desktop",
+};
 
 function getAuthToken() {
-  return localStorage.getItem("access_token");
+  return localStorage.getItem("session_token") || localStorage.getItem("access_token");
 }
 
-// Shared promise for an in-flight refresh so concurrent 401s reuse one request
-let refreshPromise = null;
-
-async function refreshAccessToken() {
-  // Reuse an ongoing refresh rather than firing a duplicate request
-  if (refreshPromise) {
-
-    return refreshPromise;
+function waitForBridge(timeoutMs = 5000) {
+  if (window.bridge && typeof window.bridge.request === "function") {
+    return Promise.resolve(window.bridge);
   }
 
-  const refreshToken = localStorage.getItem('refresh_token');
-  if (!refreshToken) {
-    console.error('❌ API: No refresh token available');
-    throw new Error('No refresh token available');
-  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      window.removeEventListener("bridge:ready", onReady);
+      reject(new Error("Desktop bridge is not ready"));
+    }, timeoutMs);
 
-
-  refreshPromise = fetch(buildUrl('/auth/refresh'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: refreshToken })
-  })
-    .then(async (response) => {
-      if (!response.ok) {
-        console.error(`❌ API: Token refresh failed with status ${response.status}`);
-        throw new Error('Token refresh failed');
+    function onReady(event) {
+      if (!event?.detail?.connected || !window.bridge || typeof window.bridge.request !== "function") {
+        return;
       }
-      const data = await response.json();
-      localStorage.setItem('access_token', data.access_token);
-      if (data.refresh_token) {
-        localStorage.setItem('refresh_token', data.refresh_token);
-      }
+      clearTimeout(timer);
+      window.removeEventListener("bridge:ready", onReady);
+      resolve(window.bridge);
+    }
 
-      return data.access_token;
-    })
-    .catch(err => {
-      console.error('❌ API: Token refresh error:', err);
-      throw err;
-    })
-    .finally(() => {
-      refreshPromise = null;
+    window.addEventListener("bridge:ready", onReady);
+  });
+}
+
+async function bridgeRequest(method, endpoint, body, headers) {
+  const bridge = await waitForBridge();
+  return new Promise((resolve) => {
+    bridge.request(method, endpoint, body || {}, headers || {}, (result) => {
+      resolve(result || { ok: false, status: 500, error: { message: "No response from desktop backend" } });
     });
-
-  return refreshPromise;
+  });
 }
 
 async function apiRequest(endpoint, options = {}) {
   const token = getAuthToken();
-
-  const config = {
-    method: options.method || "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
+  const method = options.method || "GET";
+  const headers = {
+    ...CLIENT_HEADERS,
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...options.headers,
   };
-
-  if (options.body) {
-    config.body = JSON.stringify(options.body);
-  }
+  const body = options.body || {};
 
   try {
-    const response = await fetch(buildUrl(endpoint), config);
+    const response = await bridgeRequest(method, endpoint, body, headers);
+    const status = Number(response?.status || 500);
 
-    // On 401, attempt a single token refresh then retry the original request.
-    // The _isRetry flag prevents an infinite loop if the retry also gets a 401.
-    if (response.status === 401 && !options._isRetry) {
-
-      try {
-        const newToken = await refreshAccessToken();
-
-      } catch (_refreshError) {
-        // Refresh failed — clear session and redirect to login
-        console.error(`❌ API: Token refresh failed:`, _refreshError);
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-
-        // Stop any background polling
-        if (window.statsManager && typeof window.statsManager.stopPolling === 'function') {
-          window.statsManager.stopPolling();
-        }
-
-        if (window.router) {
-          window.router.navigate('/login');
-        }
-        throw new Error('Session expired. Please log in again.');
+    if (status === 401) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('session_token');
+      localStorage.removeItem('user');
+      if (window.statsManager && typeof window.statsManager.stopPolling === 'function') {
+        window.statsManager.stopPolling();
       }
-
-      // Retry original request with the new access token
-      return apiRequest(endpoint, { ...options, _isRetry: true });
+      if (window.router) {
+        window.router.navigate('/login');
+      }
+      throw new Error('Session expired. Please log in again.');
     }
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      // FastAPI uses "detail", express-style APIs use "message"
+    if (!response?.ok) {
+      const error = response?.error || {};
       const detail = error.detail || error.message;
       const msg = Array.isArray(detail)
         ? detail.map(e => e.msg || JSON.stringify(e)).join(', ')
-        : (detail || `HTTP ${response.status}`);
+        : (detail || `HTTP ${status}`);
       throw new Error(msg);
     }
 
-    if (response.status === 204) {
+    if (status === 204) {
       return null;
     }
 
-    return await response.json();
+    return response.data ?? null;
   } catch (err) {
     console.error("API Error:", err);
     throw err;
@@ -123,21 +88,23 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 const api = {
-  get: (endpoint) => apiRequest(endpoint, { method: "GET" }),
+  get: (endpoint, options = {}) => apiRequest(endpoint, { method: "GET", ...options }),
 
-  post: (endpoint, data) =>
+  post: (endpoint, data, options = {}) =>
     apiRequest(endpoint, {
       method: "POST",
       body: data,
+      ...options,
     }),
 
-  put: (endpoint, data) =>
+  put: (endpoint, data, options = {}) =>
     apiRequest(endpoint, {
       method: "PUT",
       body: data,
+      ...options,
     }),
 
-  delete: (endpoint) => apiRequest(endpoint, { method: "DELETE" }),
+  delete: (endpoint, options = {}) => apiRequest(endpoint, { method: "DELETE", ...options }),
 };
 
 window.api = api;
