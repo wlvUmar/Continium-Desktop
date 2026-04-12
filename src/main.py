@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 import sys
+from typing import Any
 
 from PyQt6.QtWidgets import QApplication
 
@@ -11,6 +12,7 @@ from core.tray import SystemTray
 from core.window import MainWindow
 from dal import init_db
 from services import EventEmitter, NotificationService, PomodoroManager, SessionManager, TimerManager
+from services.remote_api import RemoteApiService
 from utils.bridge import JSBridge
 from utils.runtime import configure_runtime_logging
 
@@ -43,7 +45,8 @@ class AppController:
         self._services = self._create_services()
         self._wire_service_events()
         self._window = MainWindow(api_base_url=self._api_base_url)
-        self._bridge = JSBridge(self._window.web_view, self._services.events)
+        self._remote_api = RemoteApiService(self._api_base_url, self._logger)
+        self._bridge = JSBridge(self._window.web_view, self._services.events, self._handle_api_request)
         self._tray = SystemTray(self._app, self._window)
         self._overlay = OverlayManager(self._services.events)
         self._wire_shutdown()
@@ -95,6 +98,21 @@ class AppController:
             self._logger.warning("Rejected goal id %s from timer payload", goal_id)
             return
         sessions.start(int(goal_id), int(duration))
+
+    def _handle_api_request(
+        self,
+        method: str,
+        endpoint: str,
+        payload: dict[str, Any],
+        headers: dict[str, Any],
+    ) -> dict[str, Any]:
+        self._logger.debug("Bridge API request %s %s", method, endpoint)
+        return self._remote_api.request(
+            method=method,
+            endpoint=endpoint,
+            body=payload,
+            headers={k: str(v) for k, v in headers.items()},
+        )
 
 
 def main() -> None:

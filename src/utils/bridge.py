@@ -28,9 +28,22 @@ DEFAULT_FORWARD_EVENTS = (
 class _BridgeApi(QtCore.QObject):
     event_received = QtCore.pyqtSignal(str, "QVariant")
 
+    def __init__(self, request_handler: Callable[[str, str, dict[str, Any], dict[str, Any]], dict[str, Any]]) -> None:
+        super().__init__()
+        self._request_handler = request_handler
+
     @QtCore.pyqtSlot(str, "QVariant")
     def emit(self, event: str, data: Any) -> None:
         self.event_received.emit(event, data)
+
+    @QtCore.pyqtSlot(str, str, "QVariant", "QVariant", result="QVariant")
+    def request(self, method: str, endpoint: str, data: Any, headers: Any) -> dict[str, Any]:
+        return self._request_handler(
+            method,
+            endpoint,
+            _coerce_payload(data),
+            _coerce_payload(headers),
+        )
 
 
 class _DispatchProxy(QtCore.QObject):
@@ -52,11 +65,16 @@ class _DispatchProxy(QtCore.QObject):
 class JSBridge:
     """Bidirectional event bridge between Python and JS."""
 
-    def __init__(self, web_view: QWebEngineView, events: EventEmitter) -> None:
+    def __init__(
+        self,
+        web_view: QWebEngineView,
+        events: EventEmitter,
+        request_handler: Callable[[str, str, dict[str, Any], dict[str, Any]], dict[str, Any]],
+    ) -> None:
         self._events = events
         self._dispatcher = _DispatchProxy(web_view)
         self._channel = QtWebChannel.QWebChannel(web_view.page())
-        self._api = _BridgeApi()
+        self._api = _BridgeApi(request_handler)
         self._api.event_received.connect(self._on_event_received)
         self._channel.registerObject("bridge", self._api)
         web_view.page().setWebChannel(self._channel)
