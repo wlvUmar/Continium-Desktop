@@ -33,7 +33,7 @@ jobs:
 
     - name: Clean previous builds
       run: |
-        rmdir /s /q build dist || exit 0
+        Remove-Item -Recurse -Force build, dist -ErrorAction SilentlyContinue
 
     - name: Build Windows executable (PyInstaller)
       run: |
