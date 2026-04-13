@@ -101,7 +101,7 @@ jobs:
 
     - name: Clean previous builds
       run: |
-        rm -rf build dist
+        Remove-Item -Recurse -Force build, dist -ErrorAction SilentlyContinue
 
     - name: Build macOS app
       run: |
