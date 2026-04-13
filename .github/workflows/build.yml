@@ -26,6 +26,7 @@ jobs:
         python-version: '3.12'
 
     - name: Install dependencies
+      shell: pwsh
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
@@ -36,35 +37,39 @@ jobs:
       run: |
         Remove-Item -Recurse -Force build, dist -ErrorAction SilentlyContinue
 
-    - name: Build Windows executable (PyInstaller)
+    - name: Build with PyInstaller
+      shell: pwsh
       run: |
         python build.py --platform windows
 
-    - name: Verify build output
+    - name: Debug build output
+      shell: pwsh
       run: |
-        echo "=== DIST CONTENTS ==="
-        dir dist /s
+        Write-Host "=== DIST STRUCTURE ==="
+        Get-ChildItem dist -Recurse -Force
 
     - name: Create NSIS installer
+      shell: pwsh
       run: |
-        choco install nsis -y
-
-        $installerScript = Join-Path $env:GITHUB_WORKSPACE "installer\windows\installer.nsi"
-        if (-not (Test-Path $installerScript)) {
-          throw "NSIS script not found: $installerScript"
-        }
+        choco install nsis -y --no-progress
 
         $makensis = "C:\Program Files (x86)\NSIS\makensis.exe"
         if (-not (Test-Path $makensis)) {
-          throw "makensis not found"
+          throw "NSIS not found"
         }
 
-        & $makensis $installerScript
+        $script = Join-Path $env:GITHUB_WORKSPACE "installer\windows\installer.nsi"
+        if (-not (Test-Path $script)) {
+          throw "installer.nsi not found"
+        }
+
+        & $makensis $script
 
     - name: Verify installer output
+      shell: pwsh
       run: |
-        echo "=== DIST AFTER NSIS ==="
-        dir dist /s
+        Write-Host "=== FINAL DIST ==="
+        Get-ChildItem dist -Recurse -Force
 
     - name: Upload ONLY installer
       uses: actions/upload-artifact@v4
@@ -104,7 +109,6 @@ jobs:
       run: |
         rm -rf build dist
 
-
     - name: Build macOS app
       run: |
         python build.py --platform macos
@@ -123,7 +127,7 @@ jobs:
           "dist/Continium.dmg" \
           "dist/Continium.app"
 
-    - name: Upload macOS DMG only
+    - name: Upload macOS artifact
       uses: actions/upload-artifact@v4
       with:
         name: Continium-macOS
