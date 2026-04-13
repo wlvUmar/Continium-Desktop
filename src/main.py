@@ -6,7 +6,6 @@ import sys
 from typing import Any
 
 from PyQt6.QtWidgets import QApplication
-
 from core.overlay import OverlayManager
 from core.tray import SystemTray
 from core.window import MainWindow
@@ -30,7 +29,7 @@ class AppController:
     def __init__(self) -> None:
         self._logger = configure_runtime_logging()
         self._logger.info("Starting Continium desktop app")
-        self._api_base_url = os.getenv("CONTINIUM_API_BASE_URL", "").strip() or None
+        self._api_base_url = os.getenv("CONTINIUM_API_BASE_URL", "https://continium.uz/api/v1").strip() or None
         self._verify_remote_auth_ssl = _env_bool("CONTINIUM_AUTH_VERIFY_SSL", True)
         if self._api_base_url:
             self._logger.info("Configured API base URL: %s", self._api_base_url)
