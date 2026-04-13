@@ -32,6 +32,7 @@ jobs:
         pip install pyinstaller
 
     - name: Clean previous builds
+      shell: pwsh
       run: |
         Remove-Item -Recurse -Force build, dist -ErrorAction SilentlyContinue
 
