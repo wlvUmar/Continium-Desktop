@@ -7,16 +7,25 @@ import os
 import sys
 
 from PyQt6.QtCore import QUrl, QSize, QUrlQuery
+from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import QMainWindow, QWidget
 from PyQt6.QtGui import QIcon
 DEFAULT_WINDOW_SIZE = QSize(1024, 768)
 
+APP_STORAGE_DIR = (
+    Path(os.environ.get("APPDATA", Path.home() / ".local" / "share")) / "Continium"
+)
+
 
 class MainWindow(QMainWindow):
     """Main application window hosting the web UI."""
 
-    def __init__(self, interface_dir: Path | None = None, api_base_url: str | None = None) -> None:
+    def __init__(
+        self,
+        interface_dir: Path | None = None,
+        api_base_url: str | None = None,
+    ) -> None:
         super().__init__()
         self.setWindowTitle("Continium")
         self.setWindowIcon(self._load_icon())
@@ -29,7 +38,21 @@ class MainWindow(QMainWindow):
     def _create_web_view(self) -> QWidget:
         if _is_test_mode():
             return QWidget(self)
-        return QWebEngineView(self)
+
+
+        self._profile = QWebEngineProfile("ContiniumProfile")
+        self._profile.setPersistentStoragePath(str(APP_STORAGE_DIR / "storage"))
+        self._profile.setCachePath(str(APP_STORAGE_DIR / "cache"))
+
+
+        self._profile.setPersistentCookiesPolicy(
+            QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies
+        )
+
+        view = QWebEngineView()
+        page = QWebEnginePage(self._profile, view)
+        view.setPage(page)
+        return view
 
     def _load_interface(self, interface_dir: Path | None) -> None:
         if not isinstance(self.web_view, QWebEngineView):
@@ -55,4 +78,3 @@ class MainWindow(QMainWindow):
 
 def _is_test_mode() -> bool:
     return "PYTEST_CURRENT_TEST" in os.environ or "pytest" in sys.modules
-
