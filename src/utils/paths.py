@@ -15,16 +15,8 @@ def project_root() -> Path:
 
 
 def interface_dir() -> Path:
-    """Return the HTML interface directory for source and packaged layouts."""
-    root = project_root()
-    candidates = [
-        root / "interface",      # PyInstaller bundle layout
-        root / "src" / "interface",  # Source-tree layout
-    ]
-    for candidate in candidates:
-        if (candidate / "index.html").exists():
-            return candidate
-    return candidates[0]
+    """Return the packaged HTML interface directory."""
+    return project_root() / "interface"
 
 
 def resource_dir() -> Path:

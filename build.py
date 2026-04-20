@@ -6,8 +6,6 @@ import sys
 import shutil
 import platform
 import subprocess
-import stat
-import time
 from pathlib import Path
 
 
@@ -30,44 +28,7 @@ class Builder:
         print("Cleaning build artifacts...")
         for dir_path in [self.dist_dir, self.build_dir]:
             if dir_path.exists():
-                self._rmtree_with_retries(dir_path)
-
-    def _rmtree_with_retries(self, dir_path: Path, retries: int = 6, delay: float = 0.5) -> None:
-        """Remove a directory tree with retries for transient Windows file locks."""
-
-        def _onerror(func, path, exc_info):
-            # Best effort: clear readonly bits then retry the failed operation once.
-            try:
-                os.chmod(path, stat.S_IWRITE)
-            except OSError:
-                pass
-            try:
-                func(path)
-            except OSError:
-                pass
-
-        last_err: Exception | None = None
-        for attempt in range(1, retries + 1):
-            try:
-                shutil.rmtree(dir_path, onerror=_onerror)
-                return
-            except PermissionError as exc:
-                last_err = exc
-                if attempt < retries:
-                    print(f"Retry {attempt}/{retries} removing {dir_path} after file lock: {exc}")
-                    time.sleep(delay)
-                    continue
-            except OSError as exc:
-                last_err = exc
-                if attempt < retries:
-                    print(f"Retry {attempt}/{retries} removing {dir_path}: {exc}")
-                    time.sleep(delay)
-                    continue
-
-        raise RuntimeError(
-            f"Failed to remove '{dir_path}'. A file is likely locked by a running app, Explorer, or AV. "
-            "Close Continium.exe and retry."
-        ) from last_err
+                shutil.rmtree(dir_path)
 
     def _icon_arg(self, icon_path: Path) -> list[str]:
         """Return a PyInstaller icon flag when the icon file exists."""
@@ -87,7 +48,6 @@ class Builder:
     def _common_pyinstaller_args(self) -> list[str]:
         """Return shared PyInstaller options for all desktop targets."""
         return [
-            "--noconfirm",
             "--name=Continium",
             "--windowed",
             "--onedir",

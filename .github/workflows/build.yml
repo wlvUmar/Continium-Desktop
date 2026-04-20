@@ -51,65 +51,6 @@ jobs:
           throw "Expected Windows bundle not found at dist\Continium\Continium.exe"
         }
 
-    - name: Determine whether signing can run
-      id: signing_check
-      shell: pwsh
-      env:
-        WIN_SIGN_PFX_B64: ${{ secrets.WIN_SIGN_PFX_B64 }}
-        WIN_SIGN_PFX_PASSWORD: ${{ secrets.WIN_SIGN_PFX_PASSWORD }}
-      run: |
-        $canSign = $true
-        if ("${{ github.event_name }}" -eq "pull_request") {
-          $canSign = $false
-        }
-        if ([string]::IsNullOrWhiteSpace($env:WIN_SIGN_PFX_B64) -or [string]::IsNullOrWhiteSpace($env:WIN_SIGN_PFX_PASSWORD)) {
-          $canSign = $false
-        }
-        "can_sign=$($canSign.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-
-    - name: Import code-signing certificate
-      if: steps.signing_check.outputs.can_sign == 'true'
-      id: import_cert
-      shell: pwsh
-      env:
-        WIN_SIGN_PFX_B64: ${{ secrets.WIN_SIGN_PFX_B64 }}
-        WIN_SIGN_PFX_PASSWORD: ${{ secrets.WIN_SIGN_PFX_PASSWORD }}
-      run: |
-        $pfxPath = Join-Path $env:RUNNER_TEMP "codesign.pfx"
-        $pfxBytes = [Convert]::FromBase64String($env:WIN_SIGN_PFX_B64)
-        [IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
-
-        $securePassword = ConvertTo-SecureString $env:WIN_SIGN_PFX_PASSWORD -AsPlainText -Force
-        $cert = Import-PfxCertificate -FilePath $pfxPath -Password $securePassword -CertStoreLocation "Cert:\CurrentUser\My"
-        if (-not $cert) {
-          throw "Failed to import signing certificate"
-        }
-
-        $thumbprint = ($cert | Select-Object -First 1).Thumbprint
-        if ([string]::IsNullOrWhiteSpace($thumbprint)) {
-          throw "Imported certificate thumbprint is empty"
-        }
-
-        "thumbprint=$thumbprint" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-        Remove-Item -Force $pfxPath -ErrorAction SilentlyContinue
-
-    - name: Sign app executable
-      if: steps.signing_check.outputs.can_sign == 'true'
-      shell: pwsh
-      run: |
-        $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
-        if (-not $signtool) {
-          throw "signtool.exe not found"
-        }
-
-        & $signtool.FullName sign /sha1 "${{ steps.import_cert.outputs.thumbprint }}" /fd SHA256 /td SHA256 /tr "http://timestamp.digicert.com" /v "dist\Continium\Continium.exe"
-
-    - name: Signing skipped notice
-      if: steps.signing_check.outputs.can_sign != 'true'
-      shell: pwsh
-      run: |
-        Write-Host "Skipping signing (pull request build or signing secrets are not configured)."
-
     - name: Create NSIS installer
       shell: pwsh
       run: |
@@ -126,17 +67,6 @@ jobs:
         }
 
         & $makensis $script
-
-    - name: Sign installer executable
-      if: steps.signing_check.outputs.can_sign == 'true'
-      shell: pwsh
-      run: |
-        $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
-        if (-not $signtool) {
-          throw "signtool.exe not found"
-        }
-
-        & $signtool.FullName sign /sha1 "${{ steps.import_cert.outputs.thumbprint }}" /fd SHA256 /td SHA256 /tr "http://timestamp.digicert.com" /v "dist\Continium-Setup.exe"
 
     - name: Verify installer output
       shell: pwsh
@@ -158,6 +88,7 @@ jobs:
         files: dist/Continium-Setup.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
   build-macos:
     runs-on: macos-latest

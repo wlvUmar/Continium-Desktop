@@ -23,6 +23,8 @@ from utils.paths import interface_dir as packaged_interface_dir
 from utils.paths import app_data_dir
 from utils.paths import resource_dir
 
+from utils.paths import interface_dir as packaged_interface_dir
+
 DEFAULT_WINDOW_SIZE = QSize(1024, 768)
 
 
