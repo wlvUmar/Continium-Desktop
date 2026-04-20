@@ -9,78 +9,115 @@ on:
     branches: [ main, dev ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
-    
+        python-version: '3.12'
+
     - name: Install dependencies
+      shell: pwsh
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller
-    
-    - name: Build Windows executable
+
+    - name: Clean previous builds
+      shell: pwsh
+      run: |
+        Remove-Item -Recurse -Force build, dist -ErrorAction SilentlyContinue
+
+    - name: Build with PyInstaller
+      shell: pwsh
       run: |
         python build.py --platform windows
-    
-    - name: Create NSIS installer
+
+    - name: Debug build output
+      shell: pwsh
       run: |
-        choco install nsis -y
-        makensis installer/windows/installer.nsi
-    
-    - name: Upload Windows artifacts
+        Write-Host "=== DIST STRUCTURE ==="
+        Get-ChildItem dist -Recurse -Force
+
+    - name: Create NSIS installer
+      shell: pwsh
+      run: |
+        choco install nsis -y --no-progress
+
+        $makensis = "C:\Program Files (x86)\NSIS\makensis.exe"
+        if (-not (Test-Path $makensis)) {
+          throw "NSIS not found"
+        }
+
+        $script = Join-Path $env:GITHUB_WORKSPACE "installer\windows\installer.nsi"
+        if (-not (Test-Path $script)) {
+          throw "installer.nsi not found"
+        }
+
+        & $makensis $script
+
+    - name: Verify installer output
+      shell: pwsh
+      run: |
+        Write-Host "=== FINAL DIST ==="
+        Get-ChildItem dist -Recurse -Force
+
+    - name: Upload ONLY installer
       uses: actions/upload-artifact@v4
       with:
         name: Continium-Windows
-        path: |
-          dist/Continium.exe
-          dist/Continium-Setup.exe
+        path: dist/Continium-Setup.exe
         if-no-files-found: error
-    
+
     - name: Create Release (on tag)
       if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          dist/Continium.exe
-          dist/Continium-Setup.exe
+        files: dist/Continium-Setup.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+
   build-macos:
     runs-on: macos-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
-    
+        python-version: '3.12'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller
-    
+
+    - name: Clean previous builds
+      run: |
+        rm -rf build dist
+
     - name: Build macOS app
       run: |
         python build.py --platform macos
-    
+
     - name: Create DMG
       run: |
         brew install create-dmg
+        rm -f dist/Continium.dmg
+
         create-dmg \
           --volname "Continium" \
           --window-pos 200 120 \
@@ -89,7 +126,7 @@ jobs:
           --app-drop-link 600 185 \
           "dist/Continium.dmg" \
           "dist/Continium.app"
-    
+
     - name: Upload macOS app artifact
       uses: actions/upload-artifact@v4
       with:
@@ -103,12 +140,11 @@ jobs:
         name: Continium-macOS-dmg
         path: dist/Continium.dmg
         if-no-files-found: error
-    
+
     - name: Create Release (on tag)
       if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          dist/Continium.dmg
+        files: dist/Continium.dmg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

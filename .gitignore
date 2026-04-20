@@ -42,7 +42,6 @@ Thumbs.db
 *.dmg
 *.exe
 *.app
-installer/
 REPORT_TEMPLATE.txt
 contribution_report.txt
 pyrightconfig.json
