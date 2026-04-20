@@ -2,13 +2,15 @@
 SQLAlchemy synchronous database engine and session setup.
 """
 
-from pathlib import Path
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 
-# Database path: app.db in app root
-DB_PATH = Path(__file__).parent.parent.parent / "app.db"
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+from utils.paths import database_path
+
+# Store the SQLite database in a per-user writable location.
+DB_PATH = database_path()
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+DATABASE_URL = f"sqlite:///{DB_PATH.as_posix()}"
 
 engine = create_engine(
     DATABASE_URL,

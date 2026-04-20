@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+import json
 import logging
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
@@ -12,6 +13,7 @@ from dal import SessionLocal
 from dal import goal as goal_dal
 from dal import stats as stats_dal
 from services.remote_auth_api import RemoteAuthApi
+from utils.paths import app_data_dir
 
 
 @dataclass
@@ -32,6 +34,7 @@ class LocalApiService:
         self._sessions: dict[str, int] = {}
         self._logger = logger
         self._remote_auth = RemoteAuthApi(remote_api_base_url, logger, verify_ssl=verify_remote_auth_ssl)
+        self._auth_session_path = app_data_dir() / "auth_session.json"
 
     def request(
         self,
@@ -54,7 +57,19 @@ class LocalApiService:
         path = parts.path.rstrip("/")
         query = parse_qs(parts.query)
 
+        if method == "GET" and path == "/auth/session":
+            return self._ok(self._read_persisted_session())
+        if method == "POST" and path == "/auth/session/clear":
+            self._clear_persisted_session()
+            return self._ok({"cleared": True})
+
         if self._remote_auth.handles(path):
+            self._logger.debug(
+                "Auth endpoint request method=%s path=%s has_auth=%s",
+                method,
+                path,
+                bool(headers.get("Authorization")),
+            )
             return self._handle_remote_auth(method, path, body, headers)
 
         user_id = self._require_user_id(headers)
@@ -105,11 +120,15 @@ class LocalApiService:
         token = auth.split(" ", 1)[1].strip()
         user_id = self._sessions.get(token)
         if user_id:
+            self._logger.debug("Session cache hit for token_fp=%s", self._token_fingerprint(token))
             return user_id
+        self._logger.debug("Session cache miss for token_fp=%s; validating remotely", self._token_fingerprint(token))
         user_id = self._resolve_remote_user_id(token, headers)
         if not user_id:
+            self._logger.info("Auth token rejected by remote /auth/me validation")
             raise ApiError(401, "Invalid or expired session")
         self._sessions[token] = user_id
+        self._logger.debug("Session cached from remote validation user_id=%s token_fp=%s", user_id, self._token_fingerprint(token))
         return user_id
 
     def _resolve_remote_user_id(self, token: str, headers: dict[str, str]) -> int | None:
@@ -119,7 +138,15 @@ class LocalApiService:
         forwarded_headers["Authorization"] = f"Bearer {token}"
         response = self._remote_auth.request("GET", "/auth/me", None, forwarded_headers)
         if not response.get("ok"):
-            return None
+            status = int(response.get("status") or 500)
+            detail = response.get("error", {}).get("detail", "Remote auth validation failed")
+            if status in {401, 403}:
+                return None
+            if status >= 500:
+                self._logger.warning("Remote auth unavailable while validating session: status=%s detail=%s", status, detail)
+                raise ApiError(503, "Authentication service temporarily unavailable")
+            self._logger.warning("Unexpected remote auth validation response: status=%s detail=%s", status, detail)
+            raise ApiError(502, "Authentication validation failed")
         data = response.get("data") or {}
         user_id = data.get("id")
         if isinstance(user_id, int):
@@ -138,6 +165,8 @@ class LocalApiService:
         data = response.get("data")
         if method == "POST" and path == "/auth/login":
             return self._cache_login_session(response)
+        if method == "POST" and path == "/auth/refresh":
+            self._persist_remote_session(data)
         if method == "GET" and path == "/auth/me":
             self._cache_current_session(headers, data)
         return response
@@ -150,8 +179,14 @@ class LocalApiService:
         if token and user_id:
             try:
                 self._sessions[str(token)] = int(user_id)
+                self._logger.debug(
+                    "Cached login session user_id=%s token_fp=%s",
+                    int(user_id),
+                    self._token_fingerprint(str(token)),
+                )
             except (TypeError, ValueError):
                 pass
+        self._persist_remote_session(data)
         return response
 
     def _cache_current_session(self, headers: dict[str, str], payload: Any) -> None:
@@ -163,8 +198,68 @@ class LocalApiService:
         try:
             if token and user_id is not None:
                 self._sessions[token] = int(user_id)
+                self._logger.debug(
+                    "Cached /auth/me session user_id=%s token_fp=%s",
+                    int(user_id),
+                    self._token_fingerprint(token),
+                )
         except (TypeError, ValueError):
             return
+
+    def _persist_remote_session(self, payload: Any) -> None:
+        if not isinstance(payload, dict):
+            return
+        token = payload.get("session_token") or payload.get("access_token")
+        refresh = payload.get("refresh_token")
+        user = payload.get("user") if isinstance(payload.get("user"), dict) else None
+        expires_at = payload.get("expires_at") or payload.get("access_token_exp")
+        if not token and not refresh:
+            return
+        record: dict[str, Any] = {
+            "session_token": token,
+            "access_token": token,
+            "refresh_token": refresh,
+            "expires_at": expires_at,
+            "saved_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if user:
+            record["user"] = user
+        self._write_persisted_session(record)
+
+    def _read_persisted_session(self) -> dict[str, Any] | None:
+        try:
+            if not self._auth_session_path.exists():
+                return None
+            raw = self._auth_session_path.read_text(encoding="utf-8")
+            payload = json.loads(raw)
+            if isinstance(payload, dict):
+                return payload
+        except Exception:
+            self._logger.exception("Failed to read persisted auth session")
+        return None
+
+    def _write_persisted_session(self, payload: dict[str, Any]) -> None:
+        try:
+            self._auth_session_path.parent.mkdir(parents=True, exist_ok=True)
+            self._auth_session_path.write_text(json.dumps(payload), encoding="utf-8")
+            self._logger.debug("Persisted desktop auth session")
+        except Exception:
+            self._logger.exception("Failed to persist auth session")
+
+    def _clear_persisted_session(self) -> None:
+        try:
+            if self._auth_session_path.exists():
+                self._auth_session_path.unlink()
+                self._logger.debug("Cleared persisted desktop auth session")
+        except Exception:
+            self._logger.exception("Failed to clear persisted auth session")
+
+    @staticmethod
+    def _token_fingerprint(token: str) -> str:
+        if not token:
+            return "none"
+        prefix = token[:6]
+        return f"{prefix}...len={len(token)}"
 
     def _list_goals(self, user_id: int) -> list[dict[str, Any]]:
         with SessionLocal() as db:
