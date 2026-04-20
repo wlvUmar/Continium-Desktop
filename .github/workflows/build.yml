@@ -127,10 +127,17 @@ jobs:
           "dist/Continium.dmg" \
           "dist/Continium.app"
 
-    - name: Upload macOS artifact
+    - name: Upload macOS app artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Continium-macOS
+        name: Continium-macOS-app
+        path: dist/Continium.app
+        if-no-files-found: error
+
+    - name: Upload macOS DMG artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Continium-macOS-dmg
         path: dist/Continium.dmg
         if-no-files-found: error
 

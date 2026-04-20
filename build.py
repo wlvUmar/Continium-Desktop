@@ -45,16 +45,10 @@ class Builder:
             *self._pyinstaller_cmd(),
             "--name=Continium",
             "--windowed",
-            "--onedir",
-            "--paths=src",
-
-            "--collect-all=PyQt6",  # 🔥 ADD THIS
-
+            "--onefile",
             *self._icon_arg(self.root_dir / "resources" / "icon.ico"),
-
             f"--add-data={self._data_arg(self.root_dir / 'src' / 'interface', 'interface')}",
             f"--add-data={self._data_arg(self.root_dir / 'resources', 'resources')}",
-
             str(self.root_dir / "src" / "main.py"),
         ]
 

@@ -26,6 +26,14 @@ function _fmtTimeDisplay(seconds) {
     return `${m} : ${String(s).padStart(2, '0')}`;
 }
 
+function _timerAutostartRequested() {
+    const hash = window.location.hash || '';
+    const query = hash.includes('?') ? hash.split('?')[1] : '';
+    if (!query) return false;
+    const params = new URLSearchParams(query);
+    return params.get('autostart') === '1';
+}
+
 async function _saveSession() {
     const newElapsed = _timerElapsed - _timerSessionStart;
     if (!_timerCurrentGoalId || newElapsed < 60) return;
@@ -147,6 +155,10 @@ export async function initTimerView({ id }) {
     }
 
     _updateDisplay();
+
+    if (_timerAutostartRequested() && !_timerRunning) {
+        window.timerToggle();
+    }
 
     const beforeUnload = (e) => {
         if (_timerRunning || _timerElapsed > 0) {

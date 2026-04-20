@@ -12,6 +12,7 @@ from services.event_emitter import EventEmitter
 
 DEFAULT_FORWARD_EVENTS = (
     "app:ack",
+    "goal:open_detail",
     "timer:start",
     "timer:tick",
     "timer:pause",
