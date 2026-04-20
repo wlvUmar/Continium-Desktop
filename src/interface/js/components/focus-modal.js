@@ -8,6 +8,7 @@ let _focusTimerInterval = null;
 let _focusTimerRunning = false;
 let _focusTimerElapsed = 0;           // cumulative elapsed (loaded + new work)
 let _focusSessionStart = 0;           // elapsed at start of THIS session (for delta)
+let _focusPersistedElapsed = 0;       // persisted/logged elapsed (used by overall project bar)
 let _focusTimerGoalSeconds = 0;
 let _focusSessionCount = 1;
 let _focusSegmentDurations = [0, 0, 0];
@@ -79,7 +80,8 @@ function _focusGetSegmentEnd(index) {
 
 function _focusSyncSegmentStateFromElapsed() {
     if (_focusTimerElapsed >= _focusTimerGoalSeconds) {
-        _focusCurrentSegmentIndex = FOCUS_POMODORO_SEGMENTS;
+        // Keep the last segment active so timer can overflow past goal without stopping.
+        _focusCurrentSegmentIndex = Math.max(0, FOCUS_POMODORO_SEGMENTS - 1);
         _focusBreakPending = false;
         return;
     }
@@ -365,6 +367,7 @@ async function _focusSaveSession() {
     try {
 
         await api.post(`/stats/goal/${_focusModalGoalId}`, { duration_minutes: minutes });
+        _focusPersistedElapsed += (minutes * 60);
         _focusSessionStart = _focusTimerElapsed;  // Update baseline for next save
         
         // Invalidate cache so next fetch gets fresh data
@@ -395,6 +398,7 @@ async function _focusLoadTodaySession() {
         
         if (todayMinutes > 0) {
             _focusTimerElapsed = todayMinutes * 60;
+            _focusPersistedElapsed = _focusTimerElapsed;
             _focusSessionStart = _focusTimerElapsed;  // Set baseline so delta = 0 at start
             // Sync segment state and recalculate which segment we're in
             _focusSyncSegmentStateFromElapsed();
@@ -424,11 +428,6 @@ function renderFocusModal() {
             <div class="focus-modal" id="focusModalWindow">
                 <!-- Top Controls -->
                 <div class="focus-modal-controls">
-                    <button class="focus-modal-btn timer-page-btn" id="focusTimerPageBtn" title="Open Goal Detail" onclick="window.closeFocusModalAndNavigate('/goal/${_focusModalGoalId}')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                    </button>
                     <button class="focus-modal-btn exit-btn" id="focusExitBtn" title="Close Focus Mode" onclick="window.closeFocusModal()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -500,6 +499,7 @@ window.openFocusModal = async function(goalId) {
     _focusTimerRunning = false;
     _focusBreakPending = false;
     _focusCurrentSegmentIndex = 0;
+    _focusPersistedElapsed = 0;
     _focusRingVisualElapsed = 0;
     _focusRingLastTickMs = 0;
 
@@ -541,14 +541,6 @@ window.openFocusModal = async function(goalId) {
 
     // Load today's session in the background (non-blocking)
     _focusLoadTodaySession().then(() => {
-        if ((_focusBreakPending || _focusCurrentSegmentIndex >= FOCUS_POMODORO_SEGMENTS) && _focusTimerRunning) {
-            clearInterval(_focusTimerInterval);
-            _focusTimerRunning = false;
-            const playBtn = document.getElementById('focusPlayBtn');
-            if (playBtn) playBtn.classList.add('paused');
-            _focusSetPlayButtonState(false);
-            _focusStopRingAnimation();
-        }
         // Update display after stats load
         _focusUpdateDisplay();
     });
@@ -586,6 +578,7 @@ window.closeFocusModal = async function() {
     _focusModalGoal     = null;
     _focusCurrentSegmentIndex = 0;
     _focusBreakPending = false;
+    _focusPersistedElapsed = 0;
     _focusRingVisualElapsed = 0;
     _focusRingLastTickMs = 0;
     _focusDestroyPlayButtonAnimation();
@@ -594,19 +587,6 @@ window.closeFocusModal = async function() {
     if (isWindowMode && window.bridge && typeof window.bridge.emit === 'function') {
         window.bridge.emit('timer:close_window', { goal_id: goalId });
     }
-};
-
-window.closeFocusModalAndNavigate = async function(route) {
-    const goalId = _focusModalGoalId;
-    const isWindowMode = !!window.__focusWindowMode;
-    await window.closeFocusModal();
-
-    if (isWindowMode && window.bridge && typeof window.bridge.emit === 'function' && route.startsWith('/goal/') && goalId) {
-        window.bridge.emit('goal:open_detail', { goal_id: goalId });
-        return;
-    }
-
-    router.navigate(route);
 };
 
 window.focusToggle = function() {
@@ -619,12 +599,6 @@ window.focusToggle = function() {
         _focusSetPlayButtonState(false);
         _focusStopRingAnimation();
     };
-
-    if (_focusCurrentSegmentIndex >= FOCUS_POMODORO_SEGMENTS) {
-        pauseTimer();
-        _focusUpdateDisplay();
-        return;
-    }
 
     if (_focusTimerRunning) {
         pauseTimer();
@@ -643,22 +617,7 @@ window.focusToggle = function() {
             _focusTimerElapsed++;
             _focusRingLastTickMs = performance.now();
 
-            if (_focusTimerElapsed >= _focusTimerGoalSeconds) {
-                _focusTimerElapsed = _focusTimerGoalSeconds;
-                _focusCurrentSegmentIndex = FOCUS_POMODORO_SEGMENTS;
-                _focusBreakPending = false;
-                pauseTimer();
-                _focusSaveSession();
-            } else {
-                const currentSegmentEnd = _focusGetSegmentEnd(_focusCurrentSegmentIndex);
-                if (_focusTimerElapsed >= currentSegmentEnd) {
-                    _focusTimerElapsed = currentSegmentEnd;
-                    _focusCurrentSegmentIndex = Math.min(_focusCurrentSegmentIndex + 1, FOCUS_POMODORO_SEGMENTS);
-                    _focusBreakPending = _focusCurrentSegmentIndex < FOCUS_POMODORO_SEGMENTS;
-                    pauseTimer();
-                    _focusSaveSession();
-                }
-            }
+            _focusSyncSegmentStateFromElapsed();
 
             _focusUpdateDisplay();
         }, 1000);
@@ -691,6 +650,8 @@ window.focusReset = function() {
         const minutes = Math.round(pendingDelta / 60);
         api.post(`/stats/goal/${_focusModalGoalId}`, { duration_minutes: minutes })
             .catch(() => Toast.error('Failed to save session'));
+        _focusPersistedElapsed += (minutes * 60);
+        _focusSessionStart = _focusTimerElapsed;
 
         _focusSessionCount++;
     } else if (elapsed >= 60) {
@@ -700,8 +661,7 @@ window.focusReset = function() {
 
 window.focusNextSegment = function() {
     if (_focusCurrentSegmentIndex >= FOCUS_POMODORO_SEGMENTS) {
-        _focusUpdateDisplay();
-        return;
+        _focusCurrentSegmentIndex = Math.max(0, FOCUS_POMODORO_SEGMENTS - 1);
     }
 
     const wasRunning = _focusTimerRunning;
@@ -718,28 +678,29 @@ window.focusNextSegment = function() {
     }
 
     // Skip current segment completely and DO NOT save skipped time.
+    const beforeSkipElapsed = _focusTimerElapsed;
     const currentEnd = _focusGetSegmentEnd(_focusCurrentSegmentIndex);
     _focusTimerElapsed = Math.min(currentEnd, _focusTimerGoalSeconds);
     _focusRingVisualElapsed = _focusTimerElapsed;
-    _focusSessionStart = _focusTimerElapsed;
+    const skippedSeconds = Math.max(0, _focusTimerElapsed - beforeSkipElapsed);
+    _focusSessionStart = Math.min(_focusTimerElapsed, _focusSessionStart + skippedSeconds);
 
-    _focusCurrentSegmentIndex = Math.min(_focusCurrentSegmentIndex + 1, FOCUS_POMODORO_SEGMENTS);
+    _focusCurrentSegmentIndex = Math.min(_focusCurrentSegmentIndex + 1, Math.max(0, FOCUS_POMODORO_SEGMENTS - 1));
     _focusBreakPending = _focusCurrentSegmentIndex < FOCUS_POMODORO_SEGMENTS;
 
-    if (_focusCurrentSegmentIndex >= FOCUS_POMODORO_SEGMENTS) {
-        _focusBreakPending = false;
-    }
+    _focusBreakPending = false;
 
     _focusUpdateDisplay();
 
     // Keep flow predictable: if timer was running, continue on next segment.
-    if (wasRunning && _focusCurrentSegmentIndex < FOCUS_POMODORO_SEGMENTS) {
+    if (wasRunning) {
         window.focusToggle();
     }
 };
 
 function _focusUpdateDisplay(visualElapsed = _focusTimerElapsed) {
-    const totalProgressPercent = Math.min((_focusTimerElapsed / _focusTimerGoalSeconds) * 100, 100);
+    const safeGoal = Math.max(1, _focusTimerGoalSeconds);
+    const totalProgressPercent = Math.min((_focusPersistedElapsed / safeGoal) * 100, 100);
     const activeSegmentIndex = Math.min(_focusCurrentSegmentIndex, FOCUS_POMODORO_SEGMENTS - 1);
     const segmentStart = _focusGetSegmentStart(activeSegmentIndex);
     const segmentDuration = Math.max(1, _focusSegmentDurations[activeSegmentIndex] || 1);
@@ -793,9 +754,7 @@ function _focusUpdateDisplay(visualElapsed = _focusTimerElapsed) {
     // Status label
     const status = document.getElementById('focusStatusLabel');
     if (status) {
-        if (_focusCurrentSegmentIndex >= FOCUS_POMODORO_SEGMENTS) {
-            status.textContent = 'DONE';
-        } else if (_focusTimerRunning) {
+        if (_focusTimerRunning) {
             status.textContent = 'FOCUS';
         } else if (_focusBreakPending) {
             status.textContent = 'BREAK';

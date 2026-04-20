@@ -28,6 +28,33 @@ from utils.paths import resource_dir
 
 logger = logging.getLogger("continium")
 
+TRAY_THEME_TOKENS: dict[str, dict[str, str]] = {
+    "light": {
+        "menu_bg": "#F4F9FB",
+        "menu_text": "#36465D",
+        "menu_border": "#D9E4EC",
+        "item_hover_bg": "#E8F5F7",
+        "item_hover_text": "#07B6D5",
+        "separator": "#D9E4EC",
+        "row_bg": "#FFFFFF",
+        "project_name": "#475A6C",
+        "project_meta": "#7A8A9A",
+        "icon_label": "#475A6C",
+    },
+    "dark": {
+        "menu_bg": "#1A1631",
+        "menu_text": "#E0E0E0",
+        "menu_border": "#2A2A4A",
+        "item_hover_bg": "#292736",
+        "item_hover_text": "#7FD7E8",
+        "separator": "#2A2A4A",
+        "row_bg": "#15122A",
+        "project_name": "#D8E1EA",
+        "project_meta": "#98A8B8",
+        "icon_label": "#D8E1EA",
+    },
+}
+
 
 class SystemTray:
     """Manages the system tray icon and menu actions with project quick-launch."""
@@ -36,14 +63,21 @@ class SystemTray:
         self._app = app
         self._window = window
         self._events = events_emitter
+        self._theme_mode = "light"
         self._tray = QSystemTrayIcon(self._load_icon(), self._app)
         self._menu = QMenu()
         self._menu.aboutToShow.connect(self._build_menu)
         self._build_menu()
         self._tray.activated.connect(self._handle_tray_activation)
-        self._setup_stylesheet()
+        self.apply_theme(self._theme_mode)
         self._menu.setMinimumWidth(300)
         self._tray.show()
+
+    def apply_theme(self, mode: str | None) -> None:
+        """Apply active UI theme to tray menu colors."""
+        normalized = (mode or "light").strip().lower()
+        self._theme_mode = "dark" if normalized == "dark" else "light"
+        self._setup_stylesheet()
 
     def _load_icon(self, name="icon") -> QIcon:
         resources = resource_dir()
@@ -292,33 +326,34 @@ class SystemTray:
         self._app.quit()
 
     def _setup_stylesheet(self) -> None:
+        tokens = TRAY_THEME_TOKENS[self._theme_mode]
         stylesheet = """
             QMenu {
-                background: #F0F1F5;
-                color: #333333;
-                border: 1px solid #E0E0E0;
+                background: __MENU_BG__;
+                color: __MENU_TEXT__;
+                border: 1px solid __MENU_BORDER__;
                 border-radius: 8px;
                 padding: 8px;
             }
             QMenu::item:selected {
-                background: #E8F5F7;
-                color: #00BCD4;
+                background: __ITEM_HOVER_BG__;
+                color: __ITEM_HOVER_TEXT__;
             }
             QMenu::separator {
-                background: #E0E0E0;
+                background: __SEPARATOR__;
                 margin: 4px 0px;
             }
             #trayProjectRow {
-                background: #FFFFFF;
+                background: __ROW_BG__;
                 border-radius: 10px;
             }
             #trayProjectName {
-                color: #475A6C;
+                color: __PROJECT_NAME__;
                 font-weight: 700;
                 font-size: 13px;
             }
             #trayProjectMeta {
-                color: #7A8A9A;
+                color: __PROJECT_META__;
                 font-size: 11px;
             }
             #trayStartButton {
@@ -327,7 +362,7 @@ class SystemTray:
                 padding: 0px;
             }
             #trayIconRow {
-                background: #FFFFFF;
+                background: __ROW_BG__;
                 border-radius: 10px;
             }
             #trayIconButton {
@@ -336,7 +371,7 @@ class SystemTray:
                 padding: 0px;
             }
             #trayIconLabel {
-                color: #475A6C;
+                color: __ICON_LABEL__;
                 font-weight: 700;
                 font-size: 13px;
             }
@@ -346,7 +381,19 @@ class SystemTray:
                 padding: 0px;
             }
         """
-        self._menu.setStyleSheet(stylesheet)
+        self._menu.setStyleSheet(
+            stylesheet
+            .replace("__MENU_BG__", tokens["menu_bg"])
+            .replace("__MENU_TEXT__", tokens["menu_text"])
+            .replace("__MENU_BORDER__", tokens["menu_border"])
+            .replace("__ITEM_HOVER_BG__", tokens["item_hover_bg"])
+            .replace("__ITEM_HOVER_TEXT__", tokens["item_hover_text"])
+            .replace("__SEPARATOR__", tokens["separator"])
+            .replace("__ROW_BG__", tokens["row_bg"])
+            .replace("__PROJECT_NAME__", tokens["project_name"])
+            .replace("__PROJECT_META__", tokens["project_meta"])
+            .replace("__ICON_LABEL__", tokens["icon_label"])
+        )
 
     def _action(self, label: str, callback: Callable[[], None]) -> QAction:
         action = QAction(label, self._menu)

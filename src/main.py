@@ -5,6 +5,11 @@ import os
 import sys
 from typing import Any
 
+# Handle PyInstaller's sys._MEIPASS for bundled resources
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    # When running as a PyInstaller bundle, add the bundled src directory to sys.path
+    sys.path.insert(0, sys._MEIPASS)
+
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
@@ -95,6 +100,7 @@ class AppController:
         events.on("timer:pause", lambda _payload: self._pause_session(sessions))
         events.on("timer:resume", lambda _payload: self._resume_session(sessions))
         events.on("timer:complete", lambda _payload: self._end_session(sessions))
+        events.on("ui:theme", self._handle_ui_theme)
 
     def _extract_web_profile(self):
         web_view = getattr(self._window, "web_view", None)
@@ -195,6 +201,15 @@ class AppController:
             body=payload,
             headers={k: str(v) for k, v in headers.items()},
         )
+
+    def _handle_ui_theme(self, payload: dict[str, object]) -> None:
+        mode = str(payload.get("mode", "light")).strip().lower()
+        if mode not in {"light", "dark"}:
+            return
+        self._window.apply_theme(mode)
+        tray = getattr(self, "_tray", None)
+        if tray is not None:
+            tray.apply_theme(mode)
 
 
 def _env_bool(name: str, default: bool) -> bool:

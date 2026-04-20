@@ -25,6 +25,25 @@ from utils.paths import resource_dir
 
 DEFAULT_WINDOW_SIZE = QSize(1024, 768)
 
+WINDOW_THEME_TOKENS: dict[str, dict[str, str]] = {
+    "light": {
+        "top_bg": "#F4F9FB",
+        "top_border": "#D9E4EC",
+        "title_text": "#36465D",
+        "button_text": "#475A6C",
+        "button_hover": "#E6EFF4",
+        "close_hover": "#E85C5C",
+    },
+    "dark": {
+        "top_bg": "#1A1631",
+        "top_border": "#2A2A4A",
+        "title_text": "#E0E0E0",
+        "button_text": "#D0D6E0",
+        "button_hover": "#292736",
+        "close_hover": "#D94A4A",
+    },
+}
+
 
 class MainWindow(QMainWindow):
     """Main application window hosting the web UI."""
@@ -46,7 +65,14 @@ class MainWindow(QMainWindow):
         self._devtools_shortcuts: list[QShortcut] = []
         self._allow_exit = False
         self._drag_pos = QPoint()
+        self._theme_mode = "light"
         self._setup_ui(interface_dir)
+        self.apply_theme(self._theme_mode)
+
+    def apply_theme(self, mode: str | None) -> None:
+        """Apply top-bar colors to match active web UI theme."""
+        normalized = (mode or "light").strip().lower()
+        self._theme_mode = "dark" if normalized == "dark" else "light"
         self.setStyleSheet(self._get_stylesheet())
 
     def shutdown_webengine(self) -> None:
@@ -146,19 +172,20 @@ class MainWindow(QMainWindow):
 
     def _get_stylesheet(self) -> str:
         """Return stylesheet for custom title bar."""
-        return """
+        tokens = WINDOW_THEME_TOKENS[self._theme_mode]
+        stylesheet = """
             #topBar {
-                background: #F0F1F5;
-                border-bottom: 1px solid #E0E0E0;
+                background: __TOP_BG__;
+                border-bottom: 1px solid __TOP_BORDER__;
             }
             #titleLabel {
                 font-weight: 700;
                 font-size: 16px;
-                color: #333;
+                color: __TITLE_TEXT__;
             }
             #titleButton, #closeButton {
                 background: transparent;
-                color: #475A6C;
+                color: __BUTTON_TEXT__;
                 border: none;
                 padding: 6px 10px;
                 border-radius: 4px;
@@ -166,13 +193,22 @@ class MainWindow(QMainWindow):
                 font-size: 18px;
             }
             #titleButton:hover {
-                background: #E8E8EC;
+                background: __BUTTON_HOVER__;
             }
             #closeButton:hover {
-                background: #FF6B6B;
+                background: __CLOSE_HOVER__;
                 color: white;
             }
         """
+        return (
+            stylesheet
+            .replace("__TOP_BG__", tokens["top_bg"])
+            .replace("__TOP_BORDER__", tokens["top_border"])
+            .replace("__TITLE_TEXT__", tokens["title_text"])
+            .replace("__BUTTON_TEXT__", tokens["button_text"])
+            .replace("__BUTTON_HOVER__", tokens["button_hover"])
+            .replace("__CLOSE_HOVER__", tokens["close_hover"])
+        )
 
     def _create_web_view(self) -> QWidget:
         if _is_test_mode():

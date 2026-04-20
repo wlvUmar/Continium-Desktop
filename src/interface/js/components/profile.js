@@ -101,10 +101,16 @@ window.handleThemeChange = function(theme, event) {
         document.documentElement.classList.add('dark-mode');
         document.body.classList.add('dark-mode');
         localStorage.setItem('theme', 'dark');
+        if (typeof window.emitUiTheme === 'function') {
+            window.emitUiTheme('dark');
+        }
     } else {
         document.documentElement.classList.remove('dark-mode');
         document.body.classList.remove('dark-mode');
         localStorage.setItem('theme', 'light');
+        if (typeof window.emitUiTheme === 'function') {
+            window.emitUiTheme('light');
+        }
     }
 };
 

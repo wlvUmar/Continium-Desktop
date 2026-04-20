@@ -213,12 +213,17 @@ statsManager.subscribe((goalId, todayMinutes, totalMinutes, percentage) => {
 
 // Toggle light/dark theme
 window.toggleTheme = function () {
-  const isDark = document.body.classList.toggle("dark-mode");
+  const isDark = !document.body.classList.contains("dark-mode");
+  document.body.classList.toggle("dark-mode", isDark);
+  document.documentElement.classList.toggle("dark-mode", isDark);
   localStorage.setItem("theme", isDark ? "dark" : "light");
   const lightBtn = document.querySelector(".theme-opt-light");
   const darkBtn = document.querySelector(".theme-opt-dark");
   if (lightBtn) lightBtn.classList.toggle("active", !isDark);
   if (darkBtn) darkBtn.classList.toggle("active", isDark);
+  if (typeof window.emitUiTheme === "function") {
+    window.emitUiTheme(isDark ? "dark" : "light");
+  }
 };
 
 // ============================================
