@@ -40,7 +40,7 @@ export async function initGoalDetailView({ id }) {
     if (titleEl) titleEl.textContent = goal.title || 'Untitled';
 
     const playBtn = document.getElementById('goalDetailPlayBtn');
-    if (playBtn) playBtn.setAttribute('onclick', `window.openFocusModal('${goal.id}')`);
+    if (playBtn) playBtn.setAttribute('onclick', `window.startTimerForGoal('${goal.id}')`);
 
     await Promise.all([_loadTodayStats(), _loadPeriodData()]);
     _updateProgressBar('today');

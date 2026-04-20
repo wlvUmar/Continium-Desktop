@@ -20,7 +20,7 @@ function _createGoalCard(goal) {
     return `
         <div class="project-card-main" data-goal-id="${goal.id}">
             <button class="project-card-play-btn"
-                onclick="event.stopPropagation(); window.openFocusModal('${goal.id}')" title="Start session">
+                onclick="event.stopPropagation(); window.startTimerForGoal('${goal.id}')" title="Start session">
                 <img src="assets/icons/play_vector.svg" alt="Play">
             </button>
             <div class="project-card-title">${goal.title || 'Untitled'}</div>

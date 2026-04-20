@@ -118,7 +118,7 @@ window.loadSidebarProjects = async function () {
         return `
                 <div class="project-item" data-goal-id="${g.id}" onclick="router.navigate('/goal/${g.id}')">
                     <div class="sidebar-project-button-container">
-                        <button class="sidebar-play-btn" onclick="event.stopPropagation(); window.openFocusModal('${g.id}')" title="Start">
+                        <button class="sidebar-play-btn" onclick="event.stopPropagation(); window.startTimerForGoal('${g.id}')" title="Start">
                             <img src="assets/icons/play_vector.svg" alt="Play">
                         </button>
                     </div>

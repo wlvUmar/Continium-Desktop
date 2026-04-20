@@ -15,6 +15,9 @@ class Router {
     }
 
     navigate(path) {
+        if (typeof window.authStartupDebug === 'function') {
+            window.authStartupDebug('router:navigate', { to: path, from: window.location.hash.slice(1) || '/' });
+        }
         window.location.hash = path;
     }
 
@@ -29,11 +32,21 @@ class Router {
         // Strip query string for matching
         const pathPart = hash.split('?')[0];
         const matchedRoute = this.matchRoute(pathPart);
-        
+        if (typeof window.authStartupDebug === 'function') {
+            window.authStartupDebug('router:handleRoute', {
+                hash,
+                pathPart,
+                matched: !!matchedRoute,
+            });
+        }
+
         if (matchedRoute) {
             this.currentRoute = hash;
             matchedRoute.handler(matchedRoute.params);
         } else {
+            if (typeof window.authStartupDebug === 'function') {
+                window.authStartupDebug('router:redirect-login', { reason: 'no-route-match', hash });
+            }
             this.navigate('/login');
         }
     }
