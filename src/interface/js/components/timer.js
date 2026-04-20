@@ -53,7 +53,7 @@ function createTimerEmbedded(goal, sessionCount = 1, goalId = null) {
           </svg>
         </button>
 
-        <button class="timer-play-btn timer-control-btn" id="timerPlayBtn" title="Fullscreen Focus" onclick="window.openFocusModal(${currentGoalId})">
+        <button class="timer-play-btn timer-control-btn paused" id="timerPlayBtn" title="Play/Pause" onclick="window.timerToggle()">
           <svg id="timerPlayIcon" viewBox="0 0 24 24" fill="currentColor">
             <path d="M8 5v14l11-7z"></path>
           </svg>
