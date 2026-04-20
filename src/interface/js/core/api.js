@@ -55,16 +55,45 @@ async function apiRequest(endpoint, options = {}) {
     const status = Number(response?.status || 500);
 
     if (status === 401) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('session_token');
-      localStorage.removeItem('user');
+      if (typeof window.authStartupDebug === 'function') {
+        window.authStartupDebug('api:401', { endpoint, method, status });
+      }
+      const isAuthLogin = endpoint === '/auth/login';
+      const isAuthRefresh = endpoint === '/auth/refresh';
+      const alreadyRetried = !!options.__retriedAfterRefresh;
+
+      if (!isAuthLogin && !isAuthRefresh && !alreadyRetried && window.authService?.refreshToken) {
+        try {
+          const refreshed = await window.authService.refreshToken();
+          if (refreshed) {
+            return apiRequest(endpoint, { ...options, __retriedAfterRefresh: true });
+          }
+        } catch (refreshErr) {
+          console.error('Token refresh failed:', refreshErr);
+        }
+      }
+
+      if (window.authService && typeof window.authService.logout === 'function') {
+        window.authService.logout('api-401');
+      } else {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('session_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('access_token_exp');
+        localStorage.removeItem('auth_expires_at');
+        localStorage.removeItem('auth_last_login_at');
+        localStorage.removeItem('user');
+      }
       if (window.statsManager && typeof window.statsManager.stopPolling === 'function') {
         window.statsManager.stopPolling();
       }
       if (window.router) {
+        if (typeof window.authStartupDebug === 'function') {
+          window.authStartupDebug('api:redirect-login', { reason: 'api-401', endpoint });
+        }
         window.router.navigate('/login');
       }
-      throw new Error('Session expired. Please log in again.');
+      return Promise.reject(new Error('Session expired. Please log in again.'));
     }
 
     if (!response?.ok) {
@@ -73,7 +102,7 @@ async function apiRequest(endpoint, options = {}) {
       const msg = Array.isArray(detail)
         ? detail.map(e => e.msg || JSON.stringify(e)).join(', ')
         : (detail || `HTTP ${status}`);
-      throw new Error(msg);
+      return Promise.reject(new Error(msg));
     }
 
     if (status === 204) {
@@ -82,8 +111,15 @@ async function apiRequest(endpoint, options = {}) {
 
     return response.data ?? null;
   } catch (err) {
+    if (typeof window.authStartupDebug === 'function') {
+      window.authStartupDebug('api:error', {
+        endpoint,
+        method,
+        message: String(err?.message || err),
+      });
+    }
     console.error("API Error:", err);
-    throw err;
+    return Promise.reject(err);
   }
 }
 

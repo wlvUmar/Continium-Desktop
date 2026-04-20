@@ -4,19 +4,20 @@ from __future__ import annotations
 
 import logging
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 import sys
 from typing import Any
 
 from PyQt6 import QtCore
 
-LOG_DIR = Path.home() / ".continium" / "logs"
-LOG_FILE = LOG_DIR / "continium.log"
+from utils.paths import log_dir, log_file
+
+LOG_DIR = log_dir()
+LOG_FILE = log_file()
 
 
 def configure_runtime_logging() -> logging.Logger:
     logger = logging.getLogger("continium")
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     logger.propagate = False
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 

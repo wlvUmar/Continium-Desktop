@@ -14,8 +14,11 @@
   --timer-controls-icon: #FFFFFF;
   --timer-exit-bg: #36465D;
   --timer-session-bar-fill: #07B6D5;
-  --timer-session-bar-empty: #D9D9D9;
+  --timer-session-bar-empty: rgba(195, 220, 238, 0.52);
   --timer-session-bar-border: #D7D6D6;
+  --focus-overlay-tint-top: rgba(13, 25, 37, 0.12);
+  --focus-overlay-tint-bottom: rgba(13, 25, 37, 0.22);
+  --focus-overlay-blur: 10px;
 }
 
 /* ============================================
@@ -207,7 +210,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.15);
   padding: 0;
 }
@@ -270,11 +273,15 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: linear-gradient(135deg, #e8f5f7 0%, #ffffff 100%);
   z-index: 10000;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(2px);
+  backdrop-filter: none;
+}
+
+.focus-modal-overlay {
+  background: linear-gradient(135deg, #e8f5f7 0%, #ffffff 100%);
 }
 
 .timer-modal-overlay.active,
@@ -284,15 +291,18 @@
 
 .timer-modal,
 .focus-modal {
-  position: relative;
-  width: 90vw;
-  height: 90vh;
-  max-width: 1400px;
-  max-height: 1000px;
-  background: #FFFFFF;
-  border: 3px solid #B7B7B7;
-  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.25);
-  border-radius: clamp(16px, 2vw, 30px);
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  background: var(--modal-bg-image, linear-gradient(135deg, #e8f5f7 0%, #ffffff 100%));
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -302,6 +312,51 @@
   gap: 0;
   overflow: hidden;
   animation: slideUp 0.3s ease-out;
+}
+
+.focus-modal {
+  justify-content: flex-start;
+}
+
+/* Blur overlay for wallpaper - no tint */
+.focus-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    180deg,
+    var(--focus-overlay-tint-top) 0%,
+    var(--focus-overlay-tint-bottom) 100%
+  );
+  -webkit-backdrop-filter: blur(var(--focus-overlay-blur)) saturate(1.06);
+  backdrop-filter: blur(var(--focus-overlay-blur)) saturate(1.06);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.timer-modal-content,
+.focus-modal-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Focus modal gets a constrained content column so elements don't feel stretched on large screens. */
+.focus-modal-content {
+  width: min(96vw, 980px);
+  min-height: min(82vh, 920px);
+  justify-content: flex-start;
+  gap: 0;
+}
+
+.focus-modal-header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(4px, 0.9vh, 10px);
 }
 
 @keyframes slideUp {
@@ -317,6 +372,7 @@
   right: clamp(12px, 2vw, 28px);
   display: flex;
   gap: clamp(6px, 1vw, 12px);
+  z-index: 2;
 }
 
 .timer-modal-btn,
@@ -366,6 +422,8 @@
   /* gap scales: 4px mobile → 10px large screen */
   gap: clamp(4px, 1vh, 10px);
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 /* Project name */
@@ -379,6 +437,13 @@
   text-align: center;
 }
 
+.focus-modal-project-name {
+  max-width: min(90vw, 860px);
+  line-height: 1.1;
+  color: #f4fbff;
+  text-shadow: none;
+}
+
 /* Session time text */
 .timer-modal-session-info,
 .focus-modal-session-info {
@@ -390,12 +455,15 @@
   opacity: 0.9;
 }
 
+.focus-modal-session-info {
+  font-size: clamp(12px, 1.7vh, 20px);
+  color: #e8f4ff;
+}
+
 /* Session progress bar */
-.timer-modal-session-bar,
 .focus-modal-session-bar {
   width: 100%;
   max-width: clamp(260px, 55vw, 600px);
-  /* bar height scales too */
   height: clamp(8px, 1.2vh, 16px);
   background: linear-gradient(
     90deg,
@@ -404,10 +472,10 @@
     var(--timer-session-bar-empty) var(--progress-percent, 0%),
     var(--timer-session-bar-empty) 100%
   );
-  border: 1px solid var(--timer-session-bar-border);
   border-radius: 50px;
   transition: background 0.3s ease;
 }
+
 
 /* ── Modal ring ──
    Ring size = 38% of viewport height, min 200px, max 380px.
@@ -423,6 +491,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.focus-modal-ring-wrapper {
+  width: clamp(250px, 44vh, 460px);
+  height: clamp(250px, 44vh, 460px);
+  margin-top: clamp(26px, 4.2vh, 56px);
 }
 
 .timer-modal-ring-wrapper .timer-ring-svg,
@@ -454,6 +528,67 @@
   stroke-width: 40px;
 }
 
+.focus-ring-segment-track,
+.focus-ring-progress-segment {
+
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 40px;
+  transform-origin: 50% 50%;
+  transition: stroke-dasharray 0.2s linear;
+
+}
+
+.focus-ring-segment-track {
+  stroke: rgba(195, 220, 238, 0.52);
+
+
+}
+
+.focus-ring-progress-segment {
+  stroke: rgba(7, 182, 213, 0.58);
+  filter: drop-shadow(0 1px 5px rgba(58, 150, 184, 0.22));
+  transition: stroke-dasharray 0.12s linear, opacity 0.2s ease, filter 0.25s ease;
+  will-change: stroke-dasharray, opacity, filter;
+}
+
+@keyframes focus-ring-fill-wave {
+  0%, 100% {
+    stroke: rgba(7, 182, 213, 0.58);
+    filter: drop-shadow(0 1px 5px rgba(58, 150, 184, 0.22));
+  }
+  50% {
+    stroke: rgba(50, 200, 230, 0.72);
+    filter: drop-shadow(0 2px 10px rgba(88, 220, 255, 0.35));
+  }
+}
+
+.focus-ring-progress-segment[style*="strokeDasharray"] {
+  animation: focus-ring-fill-wave 1.2s ease-in-out infinite;
+}
+
+@keyframes focus-ring-active-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 1px 5px rgba(58, 150, 184, 0.22));
+  }
+  50% {
+    filter: drop-shadow(0 2px 9px rgba(88, 203, 232, 0.4));
+  }
+}
+
+.focus-ring-progress-segment.active {
+  animation: focus-ring-active-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-ring-progress-segment,
+  .focus-ring-progress-segment.active {
+    animation: none;
+    transition: opacity 0.2s ease;
+  }
+
+}
+
 /* Inner text — all clamp so it fills the ring at any size */
 .timer-modal-ring-wrapper .timer-inner-content,
 .timer-modal-ring-wrapper .focus-inner-content,
@@ -461,6 +596,10 @@
 .focus-modal-ring-wrapper .focus-inner-content {
   /* width tracks ring size */
   width: clamp(110px, 22vh, 220px);
+}
+
+.focus-modal-ring-wrapper .focus-inner-content {
+  width: clamp(130px, 24vh, 250px);
 }
 
 .timer-modal-ring-wrapper .timer-status-label,
@@ -472,6 +611,12 @@
   height: auto;
 }
 
+.focus-modal-ring-wrapper .focus-status-label {
+  font-size: clamp(10px, 1.35vh, 16px);
+  letter-spacing: 0.22em;
+  color: #dff2ff;
+}
+
 .timer-modal-ring-wrapper .timer-time-display,
 .timer-modal-ring-wrapper .focus-time-display,
 .focus-modal-ring-wrapper .timer-time-display,
@@ -481,13 +626,21 @@
   margin-bottom: clamp(4px, 0.8vh, 10px);
 }
 
-.timer-modal-ring-wrapper .timer-session-badge,
-.timer-modal-ring-wrapper .focus-session-badge,
-.focus-modal-ring-wrapper .timer-session-badge,
+.focus-modal-ring-wrapper .focus-time-display {
+  font-size: clamp(30px, 6.4vh, 64px);
+  color: #f4fbff;
+  text-shadow: 0 2px 10px rgba(6, 28, 46, 0.28);
+}
+
+
 .focus-modal-ring-wrapper .focus-session-badge {
-  width:  clamp(18px, 2.5vh, 32px);
-  height: clamp(18px, 2.5vh, 32px);
-  font-size: clamp(10px, 1.4vh, 16px);
+  width: clamp(32px, 5vh, 42px);
+  height: clamp(32px, 5vh, 42px);
+  font-size: clamp(10px, 1.45vh, 14px);
+  background: rgba(239, 246, 252, 0.85);
+  color: #284153;
+  border: 1px solid rgba(135, 165, 188, 0.45);
+  margin-top: clamp(10px, 4vh, 20px);
 }
 
 /* ── Modal controls ── */
@@ -498,6 +651,12 @@
   justify-content: center;
   gap: clamp(16px, 3vw, 48px);
   margin-top: clamp(6px, 1.2vh, 16px);
+}
+
+.focus-modal-controls-wrapper {
+  margin-top: auto;
+  padding-top: clamp(12px, 1.8vh, 24px);
+  gap: clamp(14px, 2.8vw, 42px);
 }
 
 /* Reset / Next side buttons */
@@ -515,6 +674,24 @@
   transition: all 0.2s ease;
   box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
   padding: 0;
+}
+
+.focus-modal-btn {
+  background: rgba(39, 59, 76, 0.5);
+  border: none;
+  backdrop-filter: blur(3px);
+}
+
+.focus-modal-btn.timer-page-btn,
+.focus-modal-control-btn,
+.focus-modal-play-btn {
+  background: rgba(41, 138, 170, 0.58);
+  border: none;
+}
+
+.focus-modal-btn:hover,
+.focus-modal-control-btn:hover {
+  background: rgba(41, 138, 170, 0.72);
 }
 
 .timer-modal-control-btn:hover,
@@ -544,6 +721,32 @@
   box-sizing: border-box;
 }
 
+.focus-modal-play-btn {
+  width: clamp(76px, 12vmin, 132px);
+  height: clamp(76px, 12vmin, 132px);
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+.focus-modal-controls-wrapper #focusPlayBtn {
+  width: clamp(92px, 14vmin, 152px) !important;
+  height: clamp(92px, 14vmin, 152px) !important;
+}
+
+
+.focus-play-visualizer-canvas {
+  width: calc(100% - 14px);
+  height: calc(100% - 14px);
+  margin: 7px;
+  border-radius: 50%;
+  display: block;
+}
+
 .timer-modal-play-btn.paused,
 .focus-modal-play-btn.paused {
   box-shadow: none;
@@ -561,6 +764,7 @@
 /* ============================================
    DARK MODE
    ============================================ */
+
 
 body.dark-mode .timer-ring-circle,
 body.dark-mode .focus-ring-circle {
@@ -586,23 +790,57 @@ body.dark-mode .focus-session-badge {
   color: #e0e0e0;
 }
 
-body.dark-mode .timer-session-bar,
-body.dark-mode .timer-modal-session-bar,
+
+
+body.dark-mode .focus-modal-session-info,
+body.dark-mode .focus-modal-ring-wrapper .focus-status-label,
+body.dark-mode .focus-modal-ring-wrapper .focus-time-display,
+body.dark-mode .focus-modal-ring-wrapper .focus-session-badge {
+  color: #dfe8f2;
+}
+
 body.dark-mode .focus-modal-session-bar {
   background: linear-gradient(
     90deg,
-    var(--timer-session-bar-fill) 0%,
-    var(--timer-session-bar-fill) var(--progress-percent, 0%),
-    #404050 var(--progress-percent, 0%),
-    #404050 100%
+    rgba(41, 138, 170, 0.58) 0%,
+    rgba(41, 138, 170, 0.58) var(--progress-percent, 0%),
+    rgba(106, 116, 140, 0.55) var(--progress-percent, 0%),
+    rgba(106, 116, 140, 0.55) 100%
   );
-  border-color: #505060;
+  border-color: rgba(102, 114, 138, 0.72);
 }
 
-body.dark-mode .timer-modal,
-body.dark-mode .focus-modal {
+body.dark-mode .focus-ring-segment-track {
+  stroke: rgba(106, 116, 140, 0.55);
+}
+
+body.dark-mode .focus-ring-progress-segment {
+  stroke: rgba(41, 138, 170, 0.58);
+}
+
+body.dark-mode .focus-ring-progress-segment.active {
+  animation-name: focus-ring-active-pulse;
+}
+
+body.dark-mode .timer-modal {
   background: #1a1a2e;
   border-color: #404050;
+}
+
+/* Keep focus window using wallpaper background in dark mode too. */
+body.dark-mode .focus-modal {
+  background: var(--modal-bg-image, linear-gradient(135deg, #2a2a40 0%, #1a1a2e 100%));
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+body.dark-mode .focus-modal::before {
+  background: linear-gradient(
+    180deg,
+    rgba(9, 17, 28, 0.2) 0%,
+    rgba(9, 17, 28, 0.34) 100%
+  );
 }
 
 /* ============================================
@@ -635,3 +873,29 @@ body.dark-mode .focus-modal {
     border-width: 24px;
   }
 }
+
+@media (max-height: 760px) {
+  .focus-modal {
+    padding-top: clamp(30px, 4vh, 42px);
+    padding-bottom: clamp(14px, 2vh, 22px);
+  }
+
+  .focus-modal-content {
+    min-height: min(86vh, 760px);
+  }
+
+  .focus-modal-header {
+    gap: clamp(3px, 0.8vh, 8px);
+  }
+
+  .focus-modal-ring-wrapper {
+    width: clamp(220px, 38vh, 360px);
+    height: clamp(220px, 38vh, 360px);
+    margin-top: clamp(12px, 2vh, 26px);
+  }
+
+  .focus-modal-controls-wrapper {
+    padding-top: clamp(8px, 1.2vh, 14px);
+  }
+}
+

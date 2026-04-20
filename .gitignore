@@ -48,3 +48,6 @@ contribution_report.txt
 pyrightconfig.json
 .github/copilot-instructions.md
 app.db
+
+# Personal reports (for development reference only)
+CONTRIBUTION_REPORT.md

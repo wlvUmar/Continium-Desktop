@@ -118,6 +118,7 @@ python src/main.py
 Runtime logs and tracebacks are written to `~/.continium/logs/continium.log`.
 Frontend API calls run through the PyQt bridge. Auth endpoints are proxied to the configured remote API (`CONTINIUM_API_BASE_URL`), while goal/stat data is served from the local Python DAL.
 If your HTTPS certificate does not match the endpoint host (for example, raw IP usage), set `CONTINIUM_AUTH_VERIFY_SSL=false` for development only.
+Qt WebEngine devtools are enabled by default. To disable them, set `CONTINIUM_DEVTOOLS_ENABLED=false`.
 
 **Build standalone EXE:**
 ```bash

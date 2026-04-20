@@ -35,7 +35,7 @@ import { initResetPasswordView }  from './views/reset-password.view.js';
 import { initProjectsView }       from './views/projects.view.js';
 import { initCompletedView }      from './views/completed.view.js';
 import { initGoalDetailView }     from './views/goal-detail.view.js';
-import { initTimerView }          from './views/timer.view.js';
+import { initFocusWindowView }    from './views/focus-window.view.js';
 import { initStatisticsView }     from './views/statistics.view.js';
 import { initPomodoroView }       from './views/pomodoro.view.js';
 
@@ -52,11 +52,157 @@ window.togglePassword = function(inputId, btn) {
     }
 };
 
+const _authStartupDebugBuffer = [];
+let _authStartupDebugSeq = 0;
+
+function _waitForBridgeReady(timeoutMs = 6000) {
+    if (window.bridge && typeof window.bridge.request === 'function') {
+        return Promise.resolve(true);
+    }
+
+    return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+            window.removeEventListener('bridge:ready', onReady);
+            resolve(false);
+        }, timeoutMs);
+
+        function onReady(event) {
+            if (!event?.detail?.connected || !window.bridge || typeof window.bridge.request !== 'function') {
+                return;
+            }
+            clearTimeout(timer);
+            window.removeEventListener('bridge:ready', onReady);
+            resolve(true);
+        }
+
+        window.addEventListener('bridge:ready', onReady);
+    });
+}
+
+window.flushAuthStartupDebug = function(reason = 'flush') {
+    if (!window.bridge || typeof window.bridge.emit !== 'function') return;
+    while (_authStartupDebugBuffer.length) {
+        const payload = _authStartupDebugBuffer.shift();
+        window.bridge.emit('auth:debug', { ...payload, flushReason: reason });
+    }
+};
+
+window.authStartupDebug = function(stage, extra = {}) {
+    const payload = {
+        seq: ++_authStartupDebugSeq,
+        stage,
+        ts: new Date().toISOString(),
+        route: window.location.hash.slice(1) || '/',
+        localStorageKeyCount: localStorage.length,
+        localStorageKeys: Object.keys(localStorage).slice(0, 20),
+        hasSessionToken: !!localStorage.getItem('session_token'),
+        hasAccessToken: !!localStorage.getItem('access_token'),
+        hasRefreshToken: !!localStorage.getItem('refresh_token'),
+        authExpiresAt: localStorage.getItem('auth_expires_at') || null,
+        ...extra,
+    };
+
+    console.info('[AUTH-STARTUP]', payload);
+    if (window.bridge && typeof window.bridge.emit === 'function') {
+        window.bridge.emit('auth:debug', payload);
+        window.flushAuthStartupDebug('bridge-live');
+    } else {
+        _authStartupDebugBuffer.push(payload);
+    }
+};
+
+window.addEventListener('bridge:ready', (event) => {
+    const connected = !!event?.detail?.connected;
+    window.authStartupDebug('bridge:ready', { connected });
+    if (connected) {
+        window.flushAuthStartupDebug('bridge-ready-event');
+    }
+});
+
+window.addEventListener('app:ack', () => {
+    window.flushAuthStartupDebug('app-ack');
+});
+
+async function _bootstrapDesktopSession() {
+    window.authStartupDebug('bootstrap:desktop-session:start');
+    const bridgeReady = await _waitForBridgeReady();
+    window.authStartupDebug('bootstrap:desktop-session:bridge-ready', { bridgeReady });
+    if (!bridgeReady) return;
+
+    try {
+        const session = await api.get('/auth/session');
+        const hasSession = !!(session && (session.session_token || session.access_token || session.refresh_token));
+        window.authStartupDebug('bootstrap:desktop-session:received', {
+            hasSession,
+            hasUser: !!session?.user,
+        });
+        if (hasSession && authService && typeof authService.bootstrapFromDesktopSession === 'function') {
+            authService.bootstrapFromDesktopSession(session);
+        }
+    } catch (err) {
+        window.authStartupDebug('bootstrap:desktop-session:error', {
+            message: String(err?.message || err),
+        });
+    }
+}
+
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
-    if (authService && authService.isAuthed()) {
-        authService.fetchUser().catch(err => console.error('Failed to fetch user:', err));
+    window.authStartupDebug('dom:ready');
+    const authed = !!(authService && authService.isAuthed());
+    window.authStartupDebug('dom:isAuthed', { authed });
+
+    if (authed) {
+        authService.restoreSession()
+            .then((user) => {
+                window.authStartupDebug('dom:restoreSession:ok', {
+                    userId: user?.id || null,
+                });
+            })
+            .catch((err) => {
+                window.authStartupDebug('dom:restoreSession:error', {
+                    message: String(err?.message || err),
+                });
+                console.error('Failed to restore session:', err);
+            });
     }
+});
+
+window.startTimerForGoal = async function(goalId) {
+    const parsedGoalId = parseInt(goalId, 10);
+    if (!parsedGoalId) return;
+
+    let durationSeconds = 150 * 60;
+    try {
+        const goal = await goalsService.fetchGoal(parsedGoalId);
+        const durationMin = Math.max(1, parseInt(goal?.duration_min || 150, 10));
+        durationSeconds = durationMin * 60;
+    } catch (_) {
+        // Keep fallback duration when goal lookup fails.
+    }
+
+    if (window.bridge && typeof window.bridge.emit === 'function') {
+        const payload = {
+            goal_id: parsedGoalId,
+            duration_seconds: durationSeconds,
+            autostart: true,
+            source: 'ui',
+        };
+        window.bridge.emit('timer:start', payload);
+        window.bridge.emit('timer:open_window', payload);
+        return;
+    }
+
+    if (typeof window.openFocusModal === 'function') {
+        window.openFocusModal(parsedGoalId);
+    }
+};
+
+window.addEventListener('goal:open_detail', (event) => {
+    if (window.__focusWindowMode) return;
+    const goalId = event?.detail?.goal_id;
+    if (!goalId) return;
+    router.navigate(`/goal/${goalId}`);
 });
 
 // ============================================
@@ -76,15 +222,21 @@ router.on('/completed',  protectedRoute(() => renderer.render('pages/completed.h
 router.on('/pomodoro',   protectedRoute(() => renderer.render('pages/pomodoro.html',   initPomodoroView,   {}, { layout: '/pomodoro'   })));
 
 router.on('/goal/:id',  protectedRoute((params) => renderer.render('pages/goal-detail.html', initGoalDetailView, params, { layout: `/goal/${params.id}`  })));
-router.on('/timer/:id', protectedRoute((params) => renderer.render('pages/timer.html',       initTimerView,      params, { layout: `/timer/${params.id}` })));
+router.on('/focus/:id',  protectedRoute((params) => renderer.render('pages/focus-window.html', initFocusWindowView, params)));
 
 router.on('/', () => {
     if (authService && authService.isAuthed()) {
+        window.authStartupDebug('route:/:redirect', { to: '/app', reason: 'isAuthed-true' });
         router.navigate('/app');
     } else {
+        window.authStartupDebug('route:/:redirect', { to: '/login', reason: 'isAuthed-false' });
         router.navigate('/login');
     }
 });
 
 // Handle current route
-router.handleRoute();
+(async () => {
+    await _bootstrapDesktopSession();
+    window.authStartupDebug('router:handleRoute:start');
+    router.handleRoute();
+})();

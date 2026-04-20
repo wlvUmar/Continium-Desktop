@@ -9,106 +9,198 @@ on:
     branches: [ main, dev ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
-    
+        python-version: '3.12'
+
     - name: Install dependencies
+      shell: pwsh
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller
-    
-    - name: Build Windows executable
+
+    - name: Clean previous builds
+      shell: pwsh
+      run: |
+        Remove-Item -Recurse -Force build, dist -ErrorAction SilentlyContinue
+
+    - name: Build with PyInstaller
+      shell: pwsh
       run: |
         python build.py --platform windows
-    
-    - name: Create NSIS installer
+
+    - name: Debug build output
+      shell: pwsh
       run: |
-        choco install nsis -y
-        makensis installer/windows/installer.nsi
-    
-    - name: Upload Windows artifacts
+        Write-Host "=== DIST STRUCTURE ==="
+        Get-ChildItem dist -Recurse -Force
+        if (-not (Test-Path "dist\Continium\Continium.exe")) {
+          throw "Expected Windows bundle not found at dist\Continium\Continium.exe"
+        }
+
+    - name: Determine whether signing can run
+      id: signing_check
+      shell: pwsh
+      env:
+        WIN_SIGN_PFX_B64: ${{ secrets.WIN_SIGN_PFX_B64 }}
+        WIN_SIGN_PFX_PASSWORD: ${{ secrets.WIN_SIGN_PFX_PASSWORD }}
+      run: |
+        $canSign = $true
+        if ("${{ github.event_name }}" -eq "pull_request") {
+          $canSign = $false
+        }
+        if ([string]::IsNullOrWhiteSpace($env:WIN_SIGN_PFX_B64) -or [string]::IsNullOrWhiteSpace($env:WIN_SIGN_PFX_PASSWORD)) {
+          $canSign = $false
+        }
+        "can_sign=$($canSign.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+    - name: Import code-signing certificate
+      if: steps.signing_check.outputs.can_sign == 'true'
+      id: import_cert
+      shell: pwsh
+      env:
+        WIN_SIGN_PFX_B64: ${{ secrets.WIN_SIGN_PFX_B64 }}
+        WIN_SIGN_PFX_PASSWORD: ${{ secrets.WIN_SIGN_PFX_PASSWORD }}
+      run: |
+        $pfxPath = Join-Path $env:RUNNER_TEMP "codesign.pfx"
+        $pfxBytes = [Convert]::FromBase64String($env:WIN_SIGN_PFX_B64)
+        [IO.File]::WriteAllBytes($pfxPath, $pfxBytes)
+
+        $securePassword = ConvertTo-SecureString $env:WIN_SIGN_PFX_PASSWORD -AsPlainText -Force
+        $cert = Import-PfxCertificate -FilePath $pfxPath -Password $securePassword -CertStoreLocation "Cert:\CurrentUser\My"
+        if (-not $cert) {
+          throw "Failed to import signing certificate"
+        }
+
+        $thumbprint = ($cert | Select-Object -First 1).Thumbprint
+        if ([string]::IsNullOrWhiteSpace($thumbprint)) {
+          throw "Imported certificate thumbprint is empty"
+        }
+
+        "thumbprint=$thumbprint" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        Remove-Item -Force $pfxPath -ErrorAction SilentlyContinue
+
+    - name: Sign app executable
+      if: steps.signing_check.outputs.can_sign == 'true'
+      shell: pwsh
+      run: |
+        $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
+        if (-not $signtool) {
+          throw "signtool.exe not found"
+        }
+
+        & $signtool.FullName sign /sha1 "${{ steps.import_cert.outputs.thumbprint }}" /fd SHA256 /td SHA256 /tr "http://timestamp.digicert.com" /v "dist\Continium\Continium.exe"
+
+    - name: Signing skipped notice
+      if: steps.signing_check.outputs.can_sign != 'true'
+      shell: pwsh
+      run: |
+        Write-Host "Skipping signing (pull request build or signing secrets are not configured)."
+
+    - name: Create NSIS installer
+      shell: pwsh
+      run: |
+        choco install nsis -y --no-progress
+
+        $makensis = "C:\Program Files (x86)\NSIS\makensis.exe"
+        if (-not (Test-Path $makensis)) {
+          throw "NSIS not found"
+        }
+
+        $script = Join-Path $env:GITHUB_WORKSPACE "installer\windows\installer.nsi"
+        if (-not (Test-Path $script)) {
+          throw "installer.nsi not found"
+        }
+
+        & $makensis $script
+
+    - name: Sign installer executable
+      if: steps.signing_check.outputs.can_sign == 'true'
+      shell: pwsh
+      run: |
+        $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
+        if (-not $signtool) {
+          throw "signtool.exe not found"
+        }
+
+        & $signtool.FullName sign /sha1 "${{ steps.import_cert.outputs.thumbprint }}" /fd SHA256 /td SHA256 /tr "http://timestamp.digicert.com" /v "dist\Continium-Setup.exe"
+
+    - name: Verify installer output
+      shell: pwsh
+      run: |
+        Write-Host "=== FINAL DIST ==="
+        Get-ChildItem dist -Recurse -Force
+
+    - name: Upload ONLY installer
       uses: actions/upload-artifact@v4
       with:
         name: Continium-Windows
-        path: |
-          dist/Continium.exe
-          dist/Continium-Setup.exe
+        path: dist/Continium-Setup.exe
         if-no-files-found: error
-    
+
     - name: Create Release (on tag)
       if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          dist/Continium.exe
-          dist/Continium-Setup.exe
+        files: dist/Continium-Setup.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos:
     runs-on: macos-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
-    
+        python-version: '3.12'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller
-    
+
+    - name: Clean previous builds
+      run: |
+        rm -rf build dist
+
     - name: Build macOS app
       run: |
         python build.py --platform macos
-    
-    - name: Create DMG
-      run: |
-        brew install create-dmg
-        create-dmg \
-          --volname "Continium" \
-          --window-pos 200 120 \
-          --window-size 800 400 \
-          --icon-size 100 \
-          --app-drop-link 600 185 \
-          "dist/Continium.dmg" \
-          "dist/Continium.app"
-    
-    - name: Upload macOS app artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: Continium-macOS-app
-        path: dist/Continium.app
-        if-no-files-found: error
 
-    - name: Upload macOS DMG artifact
+    - name: Verify macOS bundle output
+      run: |
+        test -d dist/Continium.app
+        test -f dist/Continium.dmg
+
+    - name: Upload macOS artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Continium-macOS-dmg
+        name: Continium-macOS
         path: dist/Continium.dmg
         if-no-files-found: error
-    
+
     - name: Create Release (on tag)
       if: startsWith(github.ref, 'refs/tags/v')
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          dist/Continium.dmg
+        files: dist/Continium.dmg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
