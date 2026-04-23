@@ -280,6 +280,11 @@
   backdrop-filter: none;
 }
 
+body.has-wallpaper .timer-modal-overlay,
+body.has-wallpaper .focus-modal-overlay {
+  background: transparent;
+}
+
 .focus-modal-overlay {
   background: linear-gradient(135deg, #e8f5f7 0%, #ffffff 100%);
 }
@@ -314,6 +319,35 @@
   animation: slideUp 0.3s ease-out;
 }
 
+/* Adaptive Modal Backgrounds */
+body.has-wallpaper.wallpaper-dark .timer-modal,
+body.has-wallpaper.wallpaper-dark .focus-modal {
+  background: rgba(13, 25, 37, 0.12) !important;
+  backdrop-filter: blur(6px) saturate(1.12);
+  -webkit-backdrop-filter: blur(6px) saturate(1.12);
+}
+
+body.has-wallpaper.wallpaper-light .timer-modal,
+body.has-wallpaper.wallpaper-light .focus-modal {
+  background: rgba(20, 34, 52, 0.48) !important;
+  backdrop-filter: blur(10px) saturate(1.06);
+  -webkit-backdrop-filter: blur(10px) saturate(1.06);
+}
+
+body.has-wallpaper.wallpaper-dark.dark-mode .timer-modal,
+body.has-wallpaper.wallpaper-dark.dark-mode .focus-modal {
+  background: rgba(9, 17, 28, 0.18) !important;
+  backdrop-filter: blur(6px) saturate(1.1);
+  -webkit-backdrop-filter: blur(6px) saturate(1.1);
+}
+
+body.has-wallpaper.wallpaper-light.dark-mode .timer-modal,
+body.has-wallpaper.wallpaper-light.dark-mode .focus-modal {
+  background: rgba(9, 17, 28, 0.55) !important;
+  backdrop-filter: blur(10px) saturate(1.08);
+  -webkit-backdrop-filter: blur(10px) saturate(1.08);
+}
+
 .focus-modal {
   justify-content: flex-start;
 }
@@ -335,6 +369,31 @@
   backdrop-filter: blur(var(--focus-overlay-blur)) saturate(1.06);
   z-index: 0;
   pointer-events: none;
+}
+
+/* Adaptive Pseudo-overlays (::before) */
+body.has-wallpaper.wallpaper-dark .focus-modal::before {
+  background: linear-gradient(180deg, rgba(13,25,37,0.08) 0%, rgba(13,25,37,0.20) 100%);
+  backdrop-filter: blur(6px) saturate(1.12);
+  -webkit-backdrop-filter: blur(6px) saturate(1.12);
+}
+
+body.has-wallpaper.wallpaper-light .focus-modal::before {
+  background: linear-gradient(180deg, rgba(36,54,76,0.42) 0%, rgba(20,34,52,0.60) 100%);
+  backdrop-filter: blur(10px) saturate(1.06);
+  -webkit-backdrop-filter: blur(10px) saturate(1.06);
+}
+
+body.has-wallpaper.wallpaper-dark.dark-mode .focus-modal::before {
+  background: linear-gradient(180deg, rgba(9,17,28,0.12) 0%, rgba(9,17,28,0.26) 100%);
+  backdrop-filter: blur(6px) saturate(1.1);
+  -webkit-backdrop-filter: blur(6px) saturate(1.1);
+}
+
+body.has-wallpaper.wallpaper-light.dark-mode .focus-modal::before {
+  background: linear-gradient(180deg, rgba(9,17,28,0.50) 0%, rgba(9,17,28,0.68) 100%);
+  backdrop-filter: blur(10px) saturate(1.08);
+  -webkit-backdrop-filter: blur(10px) saturate(1.08);
 }
 
 .timer-modal-content,
@@ -835,6 +894,8 @@ body.dark-mode .focus-modal {
   background-attachment: fixed;
 }
 
+
+
 body.dark-mode .focus-modal::before {
   background: linear-gradient(
     180deg,
@@ -842,6 +903,8 @@ body.dark-mode .focus-modal::before {
     rgba(9, 17, 28, 0.34) 100%
   );
 }
+
+
 
 /* ============================================
    RESPONSIVE — embedded timer only
