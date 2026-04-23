@@ -129,19 +129,28 @@ Or manually with PyInstaller:
 pyinstaller Continium.spec
 ```
 
-Output: `dist/Continium-Setup.exe`
+**Build installers manually:**
+```bash
+python installer/create_installer.py --platform windows --clean
+```
+
+On macOS:
+```bash
+python installer/create_installer.py --platform macos --clean
+```
+
+Output artifacts:
+- `dist/Continium-Setup.exe` (Windows NSIS installer)
+- `dist/Continium.dmg` (macOS DMG)
 
 ---
 
-## CI/CD
+## Release Process
 
-GitHub Actions auto-builds on push to `main`/`dev` and on version tags (`v*`):
+Installers are built manually from this repository.
 
-- **Windows:** Builds `Continium-Setup.exe` (NSIS installer)
-- **macOS:** Builds `Continium.dmg` (DMG installer)
-- **Auto-Release:** Uploads installers on `v*` tags
-
-See `.github/workflows/build.yml`
+- Windows: run `python installer/create_installer.py --platform windows --clean`
+- macOS: run `python installer/create_installer.py --platform macos --clean`
 
 ---
 
