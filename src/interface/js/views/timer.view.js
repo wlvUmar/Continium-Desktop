@@ -100,11 +100,31 @@ window.timerToggle = function() {
         if (playBtn)  playBtn.classList.add('paused');
         if (playIcon) playIcon.innerHTML = `<path d="M8 5v14l11-7z" />`;
         _saveSession();
+        if (window.bridge) window.bridge.emit('timer:pause', {});
     } else {
         _timerRunning = true;
         if (playBtn)  playBtn.classList.remove('paused');
         if (playIcon) playIcon.innerHTML = `<rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" />`;
-        _timerInterval = setInterval(() => { _timerElapsed++; _updateDisplay(); }, 1000);
+        
+        _timerInterval = setInterval(() => { 
+            _timerElapsed++; 
+            _updateDisplay(); 
+            if (window.bridge) {
+                window.bridge.emit('timer:tick', {
+                    remaining_seconds: Math.max(0, _timerGoalSeconds - _timerElapsed),
+                    elapsed_seconds: _timerElapsed,
+                    duration_seconds: _timerGoalSeconds,
+                    is_running: true
+                });
+            }
+        }, 1000);
+        
+        if (window.bridge) {
+            window.bridge.emit('timer:start', {
+                goal_id: _timerCurrentGoalId,
+                duration_seconds: _timerGoalSeconds
+            });
+        }
     }
     _updateDisplay();
 };
@@ -122,12 +142,25 @@ window.timerReset = function() {
     _timerElapsed  = 0;
     _updateDisplay();
 
+    if (window.bridge) window.bridge.emit('timer:stop', {});
+
     if (elapsed >= 60 && _timerCurrentGoalId) {
         _sessionCount++;
         api.post(`/stats/goal/${_timerCurrentGoalId}`, { duration_minutes: Math.round(elapsed / 60) })
             .catch(() => Toast.error('Failed to save session'));
     }
 };
+
+// Listen for remote events from overlay/PyQt
+window.addEventListener('timer:pause', () => {
+    if (_timerRunning) window.timerToggle();
+});
+window.addEventListener('timer:resume', () => {
+    if (!_timerRunning) window.timerToggle();
+});
+window.addEventListener('timer:stop', () => {
+    window.timerReset();
+});
 
 export async function initTimerView({ id }) {
     // Reset state

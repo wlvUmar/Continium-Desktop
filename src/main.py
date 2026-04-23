@@ -5,13 +5,12 @@ import os
 import sys
 from typing import Any
 
-# Handle PyInstaller's sys._MEIPASS for bundled resources
 if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-    # When running as a PyInstaller bundle, add the bundled src directory to sys.path
     sys.path.insert(0, sys._MEIPASS)
 
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QShortcut, QKeySequence
 from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWebEngineCore import QWebEngineProfile
 
 from core.overlay import OverlayManager
 from core.timer_window import TimerWindow
@@ -65,6 +64,7 @@ class AppController:
         self._timer_window = TimerWindow(
             api_base_url=self._api_base_url,
             shared_profile=self._extract_web_profile(),
+            interface_dir=None,  # Set to None or a valid path as needed
             events=self._services.events,
             request_handler=self._handle_api_request,
             devtools_enabled=self._devtools_enabled,
@@ -73,6 +73,28 @@ class AppController:
         self._tray = SystemTray(self._app, self._window, self._services.events)
         self._overlay = OverlayManager(self._services.events)
         self._wire_shutdown()
+
+        # Overlay/focus window logic
+        self._timer_window.window_state_changed.connect(self._on_focus_window_state)
+        self._timer_window.focusChanged = self._on_focus_window_focus
+        self._shortcut_overlay = QShortcut(QKeySequence("Ctrl+Alt+D"), self._window)
+        self._shortcut_overlay.activated.connect(self._on_overlay_shortcut)
+
+    def _on_focus_window_state(self, state):
+        if self._timer_window.isMinimized() or not self._timer_window.isVisible():
+            self._overlay.show()
+        else:
+            self._overlay.hide()
+
+    def _on_focus_window_focus(self, old, now):
+        if self._timer_window.isActiveWindow():
+            self._overlay.hide()
+        else:
+            self._overlay.show()
+
+    def _on_overlay_shortcut(self):
+        if not self._timer_window.isActiveWindow() or self._timer_window.isMinimized():
+            self._overlay.show()
 
     def run(self) -> int:
         self._window.show()
@@ -99,10 +121,11 @@ class AppController:
         events.on("timer:close_window", self._close_timer_window)
         events.on("timer:pause", lambda _payload: self._pause_session(sessions))
         events.on("timer:resume", lambda _payload: self._resume_session(sessions))
+        events.on("timer:stop", lambda _payload: self._stop_session(sessions))
         events.on("timer:complete", lambda _payload: self._end_session(sessions))
         events.on("ui:theme", self._handle_ui_theme)
 
-    def _extract_web_profile(self):
+    def _extract_web_profile(self) -> QWebEngineProfile | None:
         web_view = getattr(self._window, "web_view", None)
         if web_view is None:
             return None
@@ -115,7 +138,8 @@ class AppController:
         profile_getter = getattr(page, "profile", None)
         if not callable(profile_getter):
             return None
-        return profile_getter()
+        profile = profile_getter()
+        return profile if isinstance(profile, QWebEngineProfile) else None
 
     def _shutdown_services(self) -> None:
         self._timer_window.shutdown_webengine()
@@ -170,18 +194,24 @@ class AppController:
 
         autostart = bool(payload.get("autostart", True))
         self._timer_window.load_goal(goal_id_int, autostart=autostart)
+        # Overlay will be managed by state/focus events
 
     def _close_timer_window(self, payload: dict[str, object] | None = None) -> None:
         if self._timer_window.isVisible():
             self._timer_window.close()
+        self._overlay.hide()
 
-    @staticmethod
-    def _pause_session(sessions: SessionManager) -> None:
+    def _pause_session(self, sessions: SessionManager) -> None:
+        self._services.timer.pause()
         sessions.pause()
 
-    @staticmethod
-    def _resume_session(sessions: SessionManager) -> None:
+    def _resume_session(self, sessions: SessionManager) -> None:
+        self._services.timer.resume()
         sessions.resume()
+
+    def _stop_session(self, sessions: SessionManager) -> None:
+        self._services.timer.stop()
+        sessions.end()
 
     @staticmethod
     def _end_session(sessions: SessionManager) -> None:

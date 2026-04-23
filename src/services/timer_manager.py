@@ -171,6 +171,7 @@ class TimerManager:
                 "goal_id": self._goal_id,
                 "duration_seconds": int(self._duration_seconds),
                 "remaining_seconds": int(self._remaining_seconds),
+                "elapsed_seconds": int(self._duration_seconds - self._remaining_seconds),
                 "is_running": self._is_running,
                 "is_paused": self._is_paused,
             }

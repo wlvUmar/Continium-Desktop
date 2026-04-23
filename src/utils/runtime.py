@@ -17,7 +17,7 @@ LOG_FILE = log_file()
 
 def configure_runtime_logging() -> logging.Logger:
     logger = logging.getLogger("continium")
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     logger.propagate = False
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 

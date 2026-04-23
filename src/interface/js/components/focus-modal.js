@@ -1,5 +1,4 @@
 
-
 // Focus Modal State
 window.__focusWindowMode = window.__focusWindowMode || false;
 let _focusModalGoalId = null;
@@ -80,7 +79,6 @@ function _focusGetSegmentEnd(index) {
 
 function _focusSyncSegmentStateFromElapsed() {
     if (_focusTimerElapsed >= _focusTimerGoalSeconds) {
-        // Keep the last segment active so timer can overflow past goal without stopping.
         _focusCurrentSegmentIndex = Math.max(0, FOCUS_POMODORO_SEGMENTS - 1);
         _focusBreakPending = false;
         return;
@@ -164,11 +162,7 @@ function _drawFocusButtonRing(ctx, ring, centerX, centerY, baseR, waveBlend) {
         const r = r0 + h;
         const x = centerX + Math.cos(angle) * r;
         const y = centerY + Math.sin(angle) * r;
-        if (i === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
-        }
+        if (i === 0) { ctx.moveTo(x, y); } else { ctx.lineTo(x, y); }
     }
     ctx.closePath();
     ctx.fillStyle = `rgba(${ring.sat}, ${ring.opacity})`;
@@ -186,7 +180,6 @@ function _drawFocusButtonIcon(ctx, size) {
     const iconScaleBase = 0.62;
     const morph = _easeInOutCubic(_focusPlayTransition);
 
-    // Phase 1: play triangle compresses/slides/rotates out.
     const triangleVisibility = 1 - Math.max(0, (morph - 0.35) / 0.65);
     if (triangleVisibility > 0.001) {
         const playScaleX = iconScaleBase * (1 - 0.58 * morph);
@@ -208,7 +201,6 @@ function _drawFocusButtonIcon(ctx, size) {
         ctx.restore();
     }
 
-    // Phase 2: pause bars reveal with a slight "pop".
     const barReveal = _easeInOutCubic(Math.max(0, (morph - 0.12) / 0.88));
     if (barReveal > 0.001) {
         const pauseScale = iconScaleBase;
@@ -246,9 +238,7 @@ function _drawFocusPlayVisualizer() {
 
     _focusPlayTransition += (_focusPlayTarget - _focusPlayTransition) * 0.18;
     const waveBlend = 0.12 + (_focusPlayTransition * 0.65);
-    if (_focusPlayTarget > 0.001) {
-        _focusPlayTime += 1;
-    }
+    if (_focusPlayTarget > 0.001) { _focusPlayTime += 1; }
 
     _focusPlayCtx.clearRect(0, 0, size, size);
     _focusPlayCtx.save();
@@ -293,16 +283,12 @@ function _focusInitPlayButtonAnimation() {
 
     _focusPlayTransition = _focusTimerRunning ? 1 : 0;
     _focusPlayTarget = _focusTimerRunning ? 1 : 0;
-    if (_focusPlayFrame) {
-        cancelAnimationFrame(_focusPlayFrame);
-    }
+    if (_focusPlayFrame) { cancelAnimationFrame(_focusPlayFrame); }
     _focusPlayFrame = requestAnimationFrame(_drawFocusPlayVisualizer);
 }
 
 function _focusDestroyPlayButtonAnimation() {
-    if (_focusPlayFrame) {
-        cancelAnimationFrame(_focusPlayFrame);
-    }
+    if (_focusPlayFrame) { cancelAnimationFrame(_focusPlayFrame); }
     _focusPlayFrame = 0;
     _focusPlayCanvas = null;
     _focusPlayCtx = null;
@@ -314,9 +300,7 @@ function _focusSetPlayButtonState(isPlaying) {
 }
 
 function _focusStopRingAnimation() {
-    if (_focusRingFrame) {
-        cancelAnimationFrame(_focusRingFrame);
-    }
+    if (_focusRingFrame) { cancelAnimationFrame(_focusRingFrame); }
     _focusRingFrame = 0;
 }
 
@@ -326,7 +310,6 @@ function _focusRenderRingFrame() {
         ? _focusGetSegmentEnd(_focusCurrentSegmentIndex)
         : _focusTimerGoalSeconds;
 
-    // Interpolate visual progress between whole-second ticks for smoother ring motion.
     const tickFraction = _focusTimerRunning
         ? Math.min(Math.max((now - _focusRingLastTickMs) / 1000, 0), 0.98)
         : 0;
@@ -359,18 +342,14 @@ function _focusStartRingAnimation() {
 }
 
 async function _focusSaveSession() {
-    // Calculate only the NEW work done this session (delta, not cumulative)
     const newElapsed = _focusTimerElapsed - _focusSessionStart;
     if (!_focusModalGoalId || newElapsed < 60) return;
     
     const minutes = Math.round(newElapsed / 60);
     try {
-
         await api.post(`/stats/goal/${_focusModalGoalId}`, { duration_minutes: minutes });
         _focusPersistedElapsed += (minutes * 60);
-        _focusSessionStart = _focusTimerElapsed;  // Update baseline for next save
-        
-        // Invalidate cache so next fetch gets fresh data
+        _focusSessionStart = _focusTimerElapsed;
         statsManager.invalidateCache(_focusModalGoalId);
     } catch (err) {
         console.error(`❌ FOCUS: Failed to save session`, err);
@@ -378,19 +357,12 @@ async function _focusSaveSession() {
     }
 }
 
-// Load today's session from database
 async function _focusLoadTodaySession() {
     if (!_focusModalGoalId) return;
     try {
-
         const stats = await api.get(`/stats/goal/${_focusModalGoalId}`);
-        
         if (!Array.isArray(stats)) return;
-        
-        // Get today's date in ISO format
         const today = new Date().toISOString().split('T')[0];
-        
-        // Sum all stats from today (handles multiple sessions per day)
         const todayMinutes = stats.reduce((sum, stat) => {
             const statDate = stat.occurred_at.split('T')[0];
             return statDate === today ? sum + (stat.duration_minutes || 0) : sum;
@@ -399,25 +371,17 @@ async function _focusLoadTodaySession() {
         if (todayMinutes > 0) {
             _focusTimerElapsed = todayMinutes * 60;
             _focusPersistedElapsed = _focusTimerElapsed;
-            _focusSessionStart = _focusTimerElapsed;  // Set baseline so delta = 0 at start
-            // Sync segment state and recalculate which segment we're in
+            _focusSessionStart = _focusTimerElapsed;
             _focusSyncSegmentStateFromElapsed();
-            // Restore visual ring state to match loaded elapsed time
             _focusRingVisualElapsed = _focusTimerElapsed;
-            // Update session count based on which segment we're resuming in
             if (_focusCurrentSegmentIndex > 0) {
                 _focusSessionCount = _focusCurrentSegmentIndex + 1;
             }
-
         }
     } catch (err) {
         console.error(`❌ FOCUS: Failed to load today's session`, err);
     }
 }
-
-// ============================================
-// MODAL RENDERING
-// ============================================
 
 function renderFocusModal() {
     const goal = _focusModalGoal || { title: 'Project', duration_min: 150 };
@@ -426,7 +390,6 @@ function renderFocusModal() {
     return `
         <div class="focus-modal-overlay" id="focusModalOverlay">
             <div class="focus-modal" id="focusModalWindow">
-                <!-- Top Controls -->
                 <div class="focus-modal-controls">
                     <button class="focus-modal-btn exit-btn" id="focusExitBtn" title="Close Focus Mode" onclick="window.closeFocusModal()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -435,18 +398,14 @@ function renderFocusModal() {
                         </svg>
                     </button>
                 </div>
-
-                <!-- Modal Content -->
                 <div class="focus-modal-content">
                     <div class="focus-modal-header">
                         <div class="focus-modal-project-name">${goal.title}</div>
-
                         <div class="focus-modal-session-info">
                             <span id="focusSessionTime">0h 0m 0s</span> / <span id="focusGoalTime">${_focusFmtTime(durationSec)}</span>
                         </div>
                         <div class="focus-modal-session-bar" id="focusSessionBar" style="--progress-percent: 0%;"></div>
                     </div>
-
                     <div class="focus-modal-ring-wrapper">
                         <svg class="focus-ring-svg" viewBox="0 0 520 520">
                             <circle id="focusRingTrackSegment0" class="focus-ring-segment-track" cx="260" cy="260" r="252" />
@@ -462,7 +421,6 @@ function renderFocusModal() {
                             <div class="focus-session-badge" id="focusSessionBadge">1</div>
                         </div>
                     </div>
-
                     <div class="focus-modal-controls-wrapper">
                         <button class="focus-modal-control-btn" title="Reset" onclick="window.focusReset()">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -470,11 +428,9 @@ function renderFocusModal() {
                                 <path d="M3 3v5h5"></path>
                             </svg>
                         </button>
-
                         <button class="focus-modal-play-btn paused" id="focusPlayBtn" title="Play/Pause" onclick="window.focusToggle()">
                             <canvas id="focusPlayVisualizer" class="focus-play-visualizer-canvas" aria-hidden="true"></canvas>
                         </button>
-
                         <button class="focus-modal-control-btn" title="Next Segment" onclick="window.focusNextSegment()">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M5 5v14"></path>
@@ -488,14 +444,10 @@ function renderFocusModal() {
     `;
 }
 
-// ============================================
-// MODAL CONTROL FUNCTIONS
-// ============================================
-
 window.openFocusModal = async function(goalId) {
     _focusModalGoalId = parseInt(goalId);
     _focusSessionCount = 1;
-    _focusTimerElapsed = 0;  // Will be set by _focusLoadTodaySession
+    _focusTimerElapsed = 0;
     _focusTimerRunning = false;
     _focusBreakPending = false;
     _focusCurrentSegmentIndex = 0;
@@ -517,7 +469,6 @@ window.openFocusModal = async function(goalId) {
     }
     _focusSegmentDurations = _focusBuildSegmentDurations(_focusTimerGoalSeconds);
 
-    // Render modal IMMEDIATELY without waiting for stats (show fast)
     let modal = document.getElementById('focusModalOverlay');
     if (!modal) {
         const modalContainer = document.createElement('div');
@@ -528,20 +479,17 @@ window.openFocusModal = async function(goalId) {
         document.getElementById('focusModalOverlay').outerHTML = renderFocusModal();
     }
 
-    // Show modal and auto-start
     const overlay = document.getElementById('focusModalOverlay');
-    if (overlay) {
-        overlay.classList.add('active');
-    }
+    if (overlay) { overlay.classList.add('active'); }
 
     _focusInitSegmentedRing();
     _focusUpdateDisplay();
     _focusInitPlayButtonAnimation();
+    
+    // Auto-start session
     window.focusToggle();
 
-    // Load today's session in the background (non-blocking)
     _focusLoadTodaySession().then(() => {
-        // Update display after stats load
         _focusUpdateDisplay();
     });
 };
@@ -550,27 +498,19 @@ window.closeFocusModal = async function() {
     const goalId = _focusModalGoalId;
     const isWindowMode = !!window.__focusWindowMode;
 
-    // Stop the timer and save session
     if (_focusTimerRunning) {
-        clearInterval(_focusTimerInterval);
-        _focusTimerRunning = false;
-        const playBtn  = document.getElementById('focusPlayBtn');
-        if (playBtn)  playBtn.classList.add('paused');
-        _focusSetPlayButtonState(false);
-        _focusStopRingAnimation();
+        window.focusToggle();
     }
 
     if (_focusTimerElapsed > _focusSessionStart) {
         await _focusSaveSession();
     }
 
-    // Remove modal from DOM entirely
     const container = document.getElementById('focusModalContainer');
     if (container) container.remove();
     const overlay = document.getElementById('focusModalOverlay');
     if (overlay) overlay.remove();
 
-    // Reset state
     _focusTimerElapsed  = 0;
     _focusSessionStart  = 0;
     _focusTimerRunning  = false;
@@ -592,18 +532,14 @@ window.closeFocusModal = async function() {
 window.focusToggle = function() {
     const playBtn = document.getElementById('focusPlayBtn');
 
-    const pauseTimer = () => {
+    if (_focusTimerRunning) {
         clearInterval(_focusTimerInterval);
         _focusTimerRunning = false;
         if (playBtn) playBtn.classList.add('paused');
         _focusSetPlayButtonState(false);
         _focusStopRingAnimation();
-    };
-
-    if (_focusTimerRunning) {
-        pauseTimer();
-
         _focusSaveSession();
+        if (window.bridge) window.bridge.emit('timer:pause', {});
     } else {
         _focusBreakPending = false;
         _focusTimerRunning = true;
@@ -616,25 +552,33 @@ window.focusToggle = function() {
         _focusTimerInterval = setInterval(() => {
             _focusTimerElapsed++;
             _focusRingLastTickMs = performance.now();
-
             _focusSyncSegmentStateFromElapsed();
-
             _focusUpdateDisplay();
+            
+            if (window.bridge) {
+                window.bridge.emit('timer:tick', {
+                    remaining_seconds: Math.max(0, _focusTimerGoalSeconds - _focusTimerElapsed),
+                    elapsed_seconds: _focusTimerElapsed,
+                    duration_seconds: _focusTimerGoalSeconds,
+                    is_running: true
+                });
+            }
         }, 1000);
+        
+        if (window.bridge) {
+            window.bridge.emit('timer:start', {
+                goal_id: _focusModalGoalId,
+                duration_seconds: _focusTimerGoalSeconds
+            });
+        }
     }
 
     _focusUpdateDisplay();
 };
 
 window.focusReset = function() {
-    clearInterval(_focusTimerInterval);
-    _focusTimerRunning = false;
+    if (_focusTimerRunning) window.focusToggle();
     _focusStopRingAnimation();
-
-    const playBtn = document.getElementById('focusPlayBtn');
-
-    if (playBtn) playBtn.classList.add('paused');
-    _focusSetPlayButtonState(false);
 
     const elapsed = _focusTimerElapsed;
     const pendingDelta = _focusTimerElapsed - _focusSessionStart;
@@ -646,13 +590,14 @@ window.focusReset = function() {
     _focusRingLastTickMs = 0;
     _focusUpdateDisplay();
 
+    if (window.bridge) window.bridge.emit('timer:stop', {});
+
     if (pendingDelta >= 60 && _focusModalGoalId) {
         const minutes = Math.round(pendingDelta / 60);
         api.post(`/stats/goal/${_focusModalGoalId}`, { duration_minutes: minutes })
             .catch(() => Toast.error('Failed to save session'));
         _focusPersistedElapsed += (minutes * 60);
         _focusSessionStart = _focusTimerElapsed;
-
         _focusSessionCount++;
     } else if (elapsed >= 60) {
         _focusSessionCount++;
@@ -663,40 +608,22 @@ window.focusNextSegment = function() {
     if (_focusCurrentSegmentIndex >= FOCUS_POMODORO_SEGMENTS) {
         _focusCurrentSegmentIndex = Math.max(0, FOCUS_POMODORO_SEGMENTS - 1);
     }
-
     const wasRunning = _focusTimerRunning;
     if (_focusTimerRunning) {
-        clearInterval(_focusTimerInterval);
-        _focusTimerRunning = false;
-        _focusSetPlayButtonState(false);
-        _focusStopRingAnimation();
+        window.focusToggle();
     }
-
-    const playBtn = document.getElementById('focusPlayBtn');
-    if (playBtn) {
-        playBtn.classList.add('paused');
-    }
-
-    // Skip current segment completely and DO NOT save skipped time.
-    const beforeSkipElapsed = _focusTimerElapsed;
     const currentEnd = _focusGetSegmentEnd(_focusCurrentSegmentIndex);
     _focusTimerElapsed = Math.min(currentEnd, _focusTimerGoalSeconds);
     _focusRingVisualElapsed = _focusTimerElapsed;
-    const skippedSeconds = Math.max(0, _focusTimerElapsed - beforeSkipElapsed);
-    _focusSessionStart = Math.min(_focusTimerElapsed, _focusSessionStart + skippedSeconds);
-
     _focusCurrentSegmentIndex = Math.min(_focusCurrentSegmentIndex + 1, Math.max(0, FOCUS_POMODORO_SEGMENTS - 1));
-    _focusBreakPending = _focusCurrentSegmentIndex < FOCUS_POMODORO_SEGMENTS;
-
-    _focusBreakPending = false;
-
     _focusUpdateDisplay();
-
-    // Keep flow predictable: if timer was running, continue on next segment.
-    if (wasRunning) {
-        window.focusToggle();
-    }
+    if (wasRunning) { window.focusToggle(); }
 };
+
+// Remote control listeners
+window.addEventListener('timer:pause', () => { if (_focusTimerRunning) window.focusToggle(); });
+window.addEventListener('timer:resume', () => { if (!_focusTimerRunning) window.focusToggle(); });
+window.addEventListener('timer:stop', () => { window.focusReset(); });
 
 function _focusUpdateDisplay(visualElapsed = _focusTimerElapsed) {
     const safeGoal = Math.max(1, _focusTimerGoalSeconds);
@@ -707,7 +634,6 @@ function _focusUpdateDisplay(visualElapsed = _focusTimerElapsed) {
     const segmentElapsed = Math.max(0, Math.min(_focusTimerElapsed - segmentStart, segmentDuration));
     const ringElapsed = Math.max(0, Math.min(visualElapsed, _focusTimerGoalSeconds));
 
-    // Time display
     const timeDisplay = document.getElementById('focusTimeDisplay');
     if (timeDisplay) {
         const remaining = _focusCurrentSegmentIndex >= FOCUS_POMODORO_SEGMENTS
@@ -716,133 +642,46 @@ function _focusUpdateDisplay(visualElapsed = _focusTimerElapsed) {
         timeDisplay.textContent = _focusFmtTimeDisplay(remaining);
     }
 
-    // Session info
     const sessionTime = document.getElementById('focusSessionTime');
-    if (sessionTime) {
-        sessionTime.textContent = _focusFmtTime(_focusTimerElapsed);
-    }
+    if (sessionTime) { sessionTime.textContent = _focusFmtTime(_focusTimerElapsed); }
 
-    // Progress bar (overall)
     const bar = document.getElementById('focusSessionBar');
-    if (bar) {
-        bar.style.setProperty('--progress-percent', `${totalProgressPercent}%`);
-    }
+    if (bar) { bar.style.setProperty('--progress-percent', `${totalProgressPercent}%`); }
 
-    // Ring progress (per segment)
     for (let i = 0; i < FOCUS_POMODORO_SEGMENTS; i++) {
         const segmentFill = document.getElementById(`focusRingFillSegment${i}`);
         if (!segmentFill) continue;
-
         const start = _focusGetSegmentStart(i);
         const end = _focusGetSegmentEnd(i);
         let pct = 0;
-        if (ringElapsed >= end) {
-            pct = 1;
-        } else if (ringElapsed > start) {
-            pct = (ringElapsed - start) / Math.max(1, end - start);
-        }
-
+        if (ringElapsed >= end) { pct = 1; } else if (ringElapsed > start) { pct = (ringElapsed - start) / Math.max(1, end - start); }
         const filledLength = Math.max(0, Math.min(1, pct)) * FOCUS_RING_SEGMENT_LENGTH;
         segmentFill.style.strokeDasharray = `${filledLength} ${FOCUS_RING_CIRCUMFERENCE}`;
         segmentFill.style.opacity = filledLength > 0.6 ? '1' : '0';
-        segmentFill.classList.toggle(
-            'active',
-            _focusTimerRunning && i === _focusCurrentSegmentIndex && filledLength > 0.6
-        );
+        segmentFill.classList.toggle('active', _focusTimerRunning && i === _focusCurrentSegmentIndex && filledLength > 0.6);
     }
 
-    // Status label
     const status = document.getElementById('focusStatusLabel');
     if (status) {
-        if (_focusTimerRunning) {
-            status.textContent = 'FOCUS';
-        } else if (_focusBreakPending) {
-            status.textContent = 'BREAK';
-        } else {
-            status.textContent = 'PAUSED';
-        }
+        if (_focusTimerRunning) { status.textContent = 'FOCUS'; } 
+        else if (_focusBreakPending) { status.textContent = 'BREAK'; } 
+        else { status.textContent = 'PAUSED'; }
     }
 
-    // Session badge
     const badge = document.getElementById('focusSessionBadge');
-    if (badge) {
-        badge.textContent = `${Math.min(_focusCurrentSegmentIndex + 1, FOCUS_POMODORO_SEGMENTS)}`;
-    }
+    if (badge) { badge.textContent = `${Math.min(_focusCurrentSegmentIndex + 1, FOCUS_POMODORO_SEGMENTS)}`; }
 }
 
 window.focusUpdateDisplay = _focusUpdateDisplay;
 
-// ============================================
-// PAGE LIFECYCLE - Save session on unload
-// ============================================
-
 window.addEventListener('beforeunload', () => {
-    // Only save if focus modal is open and timer is running
     const overlay = document.getElementById('focusModalOverlay');
     const isModalOpen = overlay && overlay.classList.contains('active');
-    
     if (isModalOpen && (_focusTimerRunning || _focusTimerElapsed > _focusSessionStart)) {
-        // Stop the timer
-        clearInterval(_focusTimerInterval);
-        _focusTimerRunning = false;
-        
-        // Save any partial session (even < 60 seconds)
+        if (_focusTimerRunning) clearInterval(_focusTimerInterval);
         const newElapsed = _focusTimerElapsed - _focusSessionStart;
         if (newElapsed > 0 && _focusModalGoalId) {
-            const minutes = Math.round(newElapsed / 60);
-
-            // Use synchronous beacon API for best effort save
-            navigator.sendBeacon(
-                `/stats/goal/${_focusModalGoalId}`,
-                JSON.stringify({ duration_minutes: Math.max(1, minutes) })
-            );
+            navigator.sendBeacon(`/stats/goal/${_focusModalGoalId}`, JSON.stringify({ duration_minutes: Math.max(1, Math.round(newElapsed / 60)) }));
         }
     }
 });
-
-// ============================================
-// WALLPAPER INITIALIZATION
-// ============================================
-
-function _initializeWallpaper() {
-    // Get wallpaper path from URL query parameter
-    const params = new URLSearchParams(window.location.search);
-    const wallpaperB64 = params.get('wallpaper_b64');
-    const wallpaperMtime = params.get('wallpaper_mtime') || '';
-    const wallpaperNonce = params.get('wallpaper_nonce') || '';
-
-    let wallpaperPath = null;
-    if (wallpaperB64) {
-        try {
-            const normalized = wallpaperB64.replace(/-/g, '+').replace(/_/g, '/');
-            const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
-            wallpaperPath = atob(padded);
-        } catch (err) {
-            console.error('Failed to decode wallpaper path from query:', err);
-        }
-    }
-
-    if (wallpaperPath) {
-        // Convert Windows path to file:// URL for CSS
-        // Replace backslashes with forward slashes
-        const normalizedPath = wallpaperPath.replace(/\\/g, '/').replace(/^\/+/, '');
-        let fileUrl = `file:///${encodeURI(normalizedPath)}`;
-        const version = `${wallpaperMtime}:${wallpaperNonce}`;
-        if (version !== ':') {
-            fileUrl = `${fileUrl}?v=${encodeURIComponent(version)}`;
-        }
-
-        // Set CSS variable on root for modal to use
-        document.documentElement.style.setProperty('--modal-bg-image', `url("${fileUrl}")`);
-        console.log('Wallpaper loaded:', fileUrl);
-    }
-}
-
-// Run on page load
-document.addEventListener('DOMContentLoaded', _initializeWallpaper);
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _initializeWallpaper);
-} else {
-    _initializeWallpaper();
-}
-
