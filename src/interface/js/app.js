@@ -11,6 +11,10 @@ import './services/goals.service.js';
 import './services/stats-manager.js';
 import './services/color-manager.js';
 import './services/bridge.service.js';
+import wallpaperManager from './services/wallpaper-manager.js';
+
+// Initialize background wallpaper if provided
+wallpaperManager.init();
 
 // Core (depends on authService + router)
 import './core/route-protection.js';
