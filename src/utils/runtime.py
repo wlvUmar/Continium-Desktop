@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from logging.handlers import RotatingFileHandler
 import sys
-from typing import Any
+from typing import Any, cast
 
 from PyQt6 import QtCore
 
@@ -17,7 +17,7 @@ LOG_FILE = log_file()
 
 def configure_runtime_logging() -> logging.Logger:
     logger = logging.getLogger("continium")
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.ERROR)
     logger.propagate = False
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -47,7 +47,7 @@ def install_exception_hooks(logger: logging.Logger) -> None:
 
 
 def install_qt_message_handler(logger: logging.Logger) -> None:
-    def _handler(mode: QtCore.QtMsgType, context: QtCore.QMessageLogContext, message: str) -> None:
+    def _handler(mode: QtCore.QtMsgType, context: QtCore.QMessageLogContext, message: str | None):
         level = _qt_level(mode)
         location = _qt_location(context)
         logger.log(level, "Qt%s%s", location, f": {message}" if message else "")
@@ -72,3 +72,13 @@ def _qt_location(context: QtCore.QMessageLogContext) -> str:
     if not parts:
         return ""
     return f" ({' | '.join(parts)})"
+
+
+def set_logging_level(level: str) -> None:
+    """Set the logging level for the runtime logger."""
+    logger = logging.getLogger("continium")
+    level = level.upper()
+    if level in logging._nameToLevel:
+        logger.setLevel(logging._nameToLevel[level])
+    else:
+        raise ValueError(f"Invalid logging level: {level}")

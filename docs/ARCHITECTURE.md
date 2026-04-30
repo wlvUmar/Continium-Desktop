@@ -490,12 +490,6 @@ Continium-Desktop/
 
 ## 10. Deployment
 
-### Development
-```bash
-python -m pip install -r requirements.txt
-python src/main.py
-```
-
 ### Production (Windows)
 ```bash
 python build.py --windows

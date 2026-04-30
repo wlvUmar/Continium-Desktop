@@ -51,7 +51,7 @@ class TimerWindow(QMainWindow):
 
         # Assign parameters to instance variables
         self._api_base_url = api_base_url
-        self._devtools_enabled = devtools_enabled
+        self._devtools_enabled = False
         self._interface_dir = interface_dir
         self._shared_profile = shared_profile
         self._events = events
@@ -89,9 +89,6 @@ class TimerWindow(QMainWindow):
         root_layout.addWidget(self._web_view)
         self.setCentralWidget(root)
 
-        # Set up devtools shortcuts
-        self._setup_devtools_shortcuts()
-
     def changeEvent(self, event):
         super().changeEvent(event)
         if event.type() == QtCore.QEvent.Type.WindowStateChange:
@@ -127,12 +124,10 @@ class TimerWindow(QMainWindow):
         if self._api_base_url:
             query.addQueryItem("api_base_url", self._api_base_url)
         
-        # Add wallpaper file path if available
         wallpaper_path = get_windows_wallpaper_path()
         if wallpaper_path:
             wallpaper_b64 = base64.urlsafe_b64encode(wallpaper_path.encode("utf-8")).decode("ascii")
             query.addQueryItem("wallpaper_b64", wallpaper_b64)
-            # Bust QWebEngine/image cache when wallpaper changes.
             try:
                 query.addQueryItem("wallpaper_mtime", str(int(os.path.getmtime(wallpaper_path))))
             except OSError:
@@ -186,48 +181,6 @@ class TimerWindow(QMainWindow):
         view.setPage(page)
         self._profile = profile
         return view
-
-    def _setup_devtools_shortcuts(self) -> None:
-        if not self._devtools_enabled or not isinstance(self._web_view, QWebEngineView):
-            return
-        self._devtools_shortcuts = [
-            QShortcut(QKeySequence("F12"), self),
-            QShortcut(QKeySequence("Ctrl+Shift+I"), self),
-        ]
-        for shortcut in self._devtools_shortcuts:
-            shortcut.activated.connect(self._toggle_devtools)
-
-    def _toggle_devtools(self) -> None:
-        if not isinstance(self._web_view, QWebEngineView):
-            return
-        if self._devtools_window is not None and self._devtools_window.isVisible():
-            self._devtools_window.close()
-            return
-
-        page = self._web_view.page()
-        if page is None:
-            return
-
-        devtools_window = QMainWindow(self)
-        devtools_window.setWindowTitle("Continium Focus DevTools")
-        devtools_window.resize(1100, 760)
-        devtools_view = QWebEngineView(devtools_window)
-        devtools_page = QWebEnginePage(page.profile(), devtools_view)
-        devtools_view.setPage(devtools_page)
-        page.setDevToolsPage(devtools_page)
-        devtools_window.setCentralWidget(devtools_view)
-
-        def _cleanup_devtools() -> None:
-            current_page = self._web_view.page() if isinstance(self._web_view, QWebEngineView) else None
-            if current_page is not None:
-                current_page.setDevToolsPage(None)
-            self._devtools_view = None
-            self._devtools_window = None
-
-        devtools_window.destroyed.connect(_cleanup_devtools)
-        self._devtools_window = devtools_window
-        self._devtools_view = devtools_view
-        devtools_window.show()
 
     @staticmethod
     def _load_icon() -> QIcon:

@@ -20,7 +20,11 @@ class Builder:
         print("Cleaning build artifacts...")
         for dir_path in [self.dist_dir, self.build_dir]:
             if dir_path.exists():
-                shutil.rmtree(dir_path)
+                try:
+                    shutil.rmtree(dir_path)
+                except PermissionError as e:
+                    print(f"PermissionError: Could not delete {dir_path}. {e}")
+                    print("Ensure the file is not in use and try again.")
 
     def _icon_arg(self, icon_path: Path) -> list[str]:
         """Return a PyInstaller icon flag when the icon file exists."""
@@ -47,7 +51,7 @@ class Builder:
             "--windowed",
             "--onefile",
             *self._icon_arg(self.root_dir / "resources" / "icon.ico"),
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'interface', 'interface')}",
+            f"--add-data={self._data_arg(self.root_dir / 'src' / 'interface', 'src/interface')}",
             f"--add-data={self._data_arg(self.root_dir / 'resources', 'resources')}",
             f"--add-data={self._data_arg(self.root_dir / 'src' / 'core', 'core')}",
             f"--add-data={self._data_arg(self.root_dir / 'src' / 'dal', 'dal')}",
@@ -62,6 +66,15 @@ class Builder:
             f"--paths={self.root_dir / 'src'}",
             str(self.root_dir / "src" / "main.py"),
         ]
+
+        print("Adding data paths:")
+        print(f"Interface: {self._data_arg(self.root_dir / 'src' / 'interface', 'src/interface')}")
+        print(f"Resources: {self._data_arg(self.root_dir / 'resources', 'resources')}")
+        print(f"Core: {self._data_arg(self.root_dir / 'src' / 'core', 'core')}")
+        print(f"DAL: {self._data_arg(self.root_dir / 'src' / 'dal', 'dal')}")
+        print(f"Services: {self._data_arg(self.root_dir / 'src' / 'services', 'services')}")
+        print(f"Utils: {self._data_arg(self.root_dir / 'src' / 'utils', 'utils')}")
+        print(f"Models: {self._data_arg(self.root_dir / 'src' / 'models', 'models')}")
 
         subprocess.run(cmd, check=True, cwd=self.root_dir)
 

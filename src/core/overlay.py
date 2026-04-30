@@ -47,9 +47,11 @@ class _ArcRing(QtWidgets.QWidget):
         self._progress = 1.0
         self.setFixedSize(size, size)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+
     def set_progress(self, value: float) -> None:
         self._progress = max(0.0, min(1.0, value))
         self.update()
+
     def paintEvent(self, _event: QtGui.QPaintEvent) -> None:
         p = QtGui.QPainter(self)
         p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
@@ -63,6 +65,7 @@ class _ArcRing(QtWidgets.QWidget):
         p.setPen(pen_arc)
         p.drawArc(rect, 90 * 16, -span)
         p.end()
+
     def update_theme(self, tokens: dict[str, str]) -> None:
         self._track_color = tokens["progress_track"]
         self._arc_color = tokens["accent"]
