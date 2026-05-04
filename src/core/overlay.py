@@ -1,43 +1,40 @@
 
 from __future__ import annotations
 
+import ctypes
+import os
+
 from PyQt6 import QtCore, QtGui, QtWidgets
 from services.event_emitter import EventEmitter
 
 # --- Design tokens (mirror MainWindow WINDOW_THEME_TOKENS) ---
 THEMES = {
     "dark": {
-        "bg": "#1A1631",
-        "bg_card": "#211E3A",
         "border": "#2A2A4A",
-        "accent": "#7C6FF7",
-        "accent_dim": "#4A4580",
-        "text_primary": "#E8E4FF",
-        "text_secondary": "#8A85B0",
-        "btn_bg": "#2A2748",
-        "btn_hover": "#3A3560",
-        "btn_active": "#7C6FF7",
+        "accent": "#07B6D5",
+        "accent_dim": "#1693C5",
+        "text_primary": "#E0E0E0",
+        "text_secondary": "#AEBBD0",
+        "btn_bg": "#1A1A2E",
+        "btn_hover": "#2A2A4A",
         "danger": "#D94A4A",
         "progress_track": "#2A2A4A",
     },
     "light": {
-        "bg": "#F4F9FB",
-        "bg_card": "#FFFFFF",
-        "border": "#D9E4EC",
-        "accent": "#5B7FF7",
-        "accent_dim": "#B8CAF9",
-        "text_primary": "#36465D",
-        "text_secondary": "#6B7D94",
-        "btn_bg": "#E6EFF4",
-        "btn_hover": "#D0DDE8",
-        "btn_active": "#5B7FF7",
+        "border": "#D7D6D6",
+        "accent": "#07B6D5",
+        "accent_dim": "#1693C5",
+        "text_primary": "#475A6C",
+        "text_secondary": "#5A7892",
+        "btn_bg": "#DDEFF4",
+        "btn_hover": "#CCE5EC",
         "danger": "#E85C5C",
-        "progress_track": "#D9E4EC",
+        "progress_track": "#D9D9D9",
     },
 }
 DEFAULT_TOTAL_SECONDS = 25 * 60
-OVERLAY_OPACITY = 0.97
-DRAG_HANDLE_HEIGHT = 32
+OVERLAY_OPACITY = 1.00
+DRAG_HANDLE_HEIGHT = 44
 ARC_WIDTH = 3
 
 class _ArcRing(QtWidgets.QWidget):
@@ -45,6 +42,8 @@ class _ArcRing(QtWidgets.QWidget):
         super().__init__(parent)
         self._size = size
         self._progress = 1.0
+        self._track_color = "#2A2A4A"
+        self._arc_color = "#07B6D5"
         self.setFixedSize(size, size)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
 
@@ -57,11 +56,21 @@ class _ArcRing(QtWidgets.QWidget):
         p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
         margin = ARC_WIDTH + 2
         rect = QtCore.QRectF(margin, margin, self._size - 2 * margin, self._size - 2 * margin)
-        pen_track = QtGui.QPen(QtGui.QColor("#2A2A4A"), ARC_WIDTH, QtCore.Qt.PenStyle.SolidLine, QtCore.Qt.PenCapStyle.FlatCap)
+        pen_track = QtGui.QPen(
+            QtGui.QColor(self._track_color),
+            ARC_WIDTH,
+            QtCore.Qt.PenStyle.SolidLine,
+            QtCore.Qt.PenCapStyle.FlatCap,
+        )
         p.setPen(pen_track)
         p.drawEllipse(rect)
         span = int(self._progress * 360 * 16)
-        pen_arc = QtGui.QPen(QtGui.QColor("#7C6FF7"), ARC_WIDTH + 1, QtCore.Qt.PenStyle.SolidLine, QtCore.Qt.PenCapStyle.RoundCap)
+        pen_arc = QtGui.QPen(
+            QtGui.QColor(self._arc_color),
+            ARC_WIDTH + 1,
+            QtCore.Qt.PenStyle.SolidLine,
+            QtCore.Qt.PenCapStyle.RoundCap,
+        )
         p.setPen(pen_arc)
         p.drawArc(rect, 90 * 16, -span)
         p.end()
@@ -75,7 +84,7 @@ class OverlayWidget(QtWidgets.QWidget):
     paused = QtCore.pyqtSignal()
     resumed = QtCore.pyqtSignal()
     stopped = QtCore.pyqtSignal()
-    def __init__(self, theme: str = "dark") -> None:
+    def __init__(self, theme: str = "light") -> None:
         super().__init__()
         self._theme = theme
         self._tokens = THEMES[theme]
@@ -174,7 +183,7 @@ class OverlayWidget(QtWidgets.QWidget):
         body_layout.addLayout(ring_row)
         ctrl_row = QtWidgets.QHBoxLayout()
         ctrl_row.setSpacing(8)
-        self._play_pause_btn = QtWidgets.QPushButton("\u25b6  Start")
+        self._play_pause_btn = QtWidgets.QPushButton("Start")
         self._play_pause_btn.setObjectName("primaryBtn")
         self._play_pause_btn.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         self._play_pause_btn.clicked.connect(self._toggle_timer)
@@ -188,6 +197,9 @@ class OverlayWidget(QtWidgets.QWidget):
         ctrl_row.addWidget(stop_btn)
         body_layout.addLayout(ctrl_row)
         card_layout.addWidget(body)
+    def showEvent(self, event: QtGui.QShowEvent) -> None:
+        super().showEvent(event)
+        self._apply_native_blur_if_supported()
     def _start_drag(self, event: QtGui.QMouseEvent) -> None:
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
@@ -225,19 +237,19 @@ class OverlayWidget(QtWidgets.QWidget):
         self._ring.set_progress(progress)
     def _update_btn_state(self) -> None:
         if self._is_running:
-            self._play_pause_btn.setText("\u23f8  Pause")
+            self._play_pause_btn.setText("Pause")
             self._status_label.setText("Focusing…")
         else:
             elapsed = self._total_seconds - self._remaining_seconds
             if elapsed == 0:
-                self._play_pause_btn.setText("\u25b6  Start")
+                self._play_pause_btn.setText("Start")
                 self._status_label.setText("Ready")
             elif self._remaining_seconds <= 0:
-                self._play_pause_btn.setText("\u25b6  Start")
+                self._play_pause_btn.setText("Start")
                 self._status_label.setText("Done! \U0001f389")
             else:
-                self._play_pause_btn.setText("\u25b6  Resume")
-                # Note: _refresh_display will override this if running, 
+                self._play_pause_btn.setText("Resume")
+                # Note: _refresh_display will override this if running,
                 # but if paused we show Paused
                 self._status_label.setText("Paused")
     def _apply_theme(self) -> None:
@@ -245,15 +257,13 @@ class OverlayWidget(QtWidgets.QWidget):
         self._ring.update_theme(t)
         self.setStyleSheet(f"""
             #overlayCard {{
-                background: {t['bg']};
+                background: transparent;
                 border: 1px solid {t['border']};
-                border-radius: 14px;
+                border-radius: 16px;
             }}
             #dragBar {{
-                background: {t['bg_card']};
-                border-bottom: 1px solid {t['border']};
-                border-top-left-radius: 14px;
-                border-top-right-radius: 14px;
+                background: transparent;
+                border: none;
             }}
             #gripIcon {{
                 color: {t['text_secondary']};
@@ -315,6 +325,33 @@ class OverlayWidget(QtWidgets.QWidget):
                 color: {t['danger']};
             }}
         """)
+    def _apply_native_blur_if_supported(self) -> None:
+        if os.name != "nt":
+            return
+
+        class DWM_BLURBEHIND(ctypes.Structure):
+            _fields_ = [
+                ("dwFlags", ctypes.c_uint32),
+                ("fEnable", ctypes.c_int),
+                ("hRgnBlur", ctypes.c_void_p),
+                ("fTransitionOnMaximized", ctypes.c_int),
+            ]
+
+        # Minimal Windows blur setup.
+        DWM_BB_ENABLE = 0x00000001
+        hwnd = int(self.winId())
+
+        blur_behind = DWM_BLURBEHIND(
+            dwFlags=DWM_BB_ENABLE,
+            fEnable=1,
+            hRgnBlur=None,
+            fTransitionOnMaximized=0,
+        )
+        try:
+            dwmapi = ctypes.WinDLL("dwmapi")
+            dwmapi.DwmEnableBlurBehindWindow(ctypes.c_void_p(hwnd), ctypes.byref(blur_behind))
+        except OSError:
+            return
 
 class _OverlaySignals(QtCore.QObject):
     tick = QtCore.pyqtSignal(int, int)
@@ -338,6 +375,7 @@ class OverlayManager:
             events.on("timer:stop", self._handle_stop)
             events.on("timer:complete", self._handle_complete)
             events.on("goal:set", self._handle_goal)
+            events.on("ui:theme", self._handle_theme)
             events.on("theme:change", self._handle_theme)
     def show(self) -> None:
         self._widget.show()
