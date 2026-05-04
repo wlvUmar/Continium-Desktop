@@ -98,6 +98,27 @@ Forwarding is implemented with:
 window.dispatchEvent(new CustomEvent(eventName, { detail: payload }))
 ```
 
+### Request lifecycle (example: `GET /goals`)
+
+```mermaid
+sequenceDiagram
+    participant JS as Frontend (api.js)
+    participant QW as Qt WebChannel bridge
+    participant API as LocalApiService
+    participant DAL as dal/goal.py
+    participant DB as SQLite
+
+    JS->>QW: bridge.request("GET", "/goals", {}, headers)
+    QW->>API: request(method, endpoint, body, headers)
+    API->>API: _require_user_id(headers)
+    API->>DAL: list_goals(db, user_id)
+    DAL->>DB: SELECT goals...
+    DB-->>DAL: rows
+    DAL-->>API: Goal ORM objects
+    API-->>QW: {ok:true,status:200,data:[...]}
+    QW-->>JS: callback(result)
+```
+
 ---
 
 ## 5. API boundary (desktop bridge API)
@@ -189,6 +210,35 @@ The code currently uses **event-driven synchronization** between JS and Python:
 
 `TimerManager` and `PomodoroManager` services exist in Python, but frontend also has an independent JS pomodoro state machine (`js/core/pomodoro.js`) used by the Pomodoro page.
 
+### Event synchronization flow
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as focus-modal.js / timer.view.js
+    participant BR as JSBridge + EventEmitter
+    participant SM as SessionManager
+    participant OV as OverlayManager
+    participant TW as TimerWindow
+
+    User->>UI: Start focus session
+    UI->>BR: bridge.emit("timer:start", payload)
+    UI->>BR: bridge.emit("timer:open_window", payload)
+    BR->>SM: session.start(goal_id, duration_seconds)
+    BR->>TW: load_goal(goal_id, autostart=true)
+    BR->>OV: timer:start (set total + show)
+
+    loop while running
+        UI->>BR: bridge.emit("timer:tick", {...})
+        BR->>OV: timer:tick (update remaining/progress)
+    end
+
+    User->>UI: Pause / Resume / Stop
+    UI->>BR: bridge.emit("timer:pause|resume|stop", {})
+    BR->>SM: session.pause|resume|end()
+    BR->>OV: update overlay state
+```
+
 ---
 
 ## 8. Configuration and storage
@@ -261,6 +311,6 @@ src/
 
 - Build entry: `build.py`
 - PyInstaller spec: `Continium.spec`
-- Installer scripts: `installer/create_installer.py` (Windows/macOS flows documented in `README.md`)
+- PyInstaller invocation uses `sys.executable -m PyInstaller` (see `build.py`)
 
 This architecture document intentionally reflects the **implemented** structure and data/communication paths in the current codebase.
