@@ -41,6 +41,94 @@ graph TD
     O --> P[(SQLite app.db)]
 ```
 
+### UML class diagram (core runtime objects)
+
+```mermaid
+classDiagram
+    class AppController {
+        +run() int
+        -_create_services() AppServices
+        -_wire_service_events()
+        -_handle_api_request(method, endpoint, payload, headers) dict
+    }
+
+    class AppServices {
+        +events: EventEmitter
+        +timer: TimerManager
+        +pomodoro: PomodoroManager
+        +notifications: NotificationService
+        +sessions: SessionManager
+    }
+
+    class JSBridge {
+        +forward_events(event_names)
+    }
+
+    class EventEmitter {
+        +on(event, handler)
+        +emit(event, payload)
+        +off(event, handler)
+    }
+
+    class LocalApiService {
+        +request(method, endpoint, body, headers) dict
+    }
+
+    class RemoteAuthApi {
+        +handles(path) bool
+        +request(method, endpoint, body, headers) dict
+    }
+
+    class TimerManager {
+        +start(goal_id, duration_minutes) bool
+        +pause() bool
+        +resume() bool
+        +stop()
+    }
+
+    class SessionManager {
+        +start(goal_id, duration_seconds)
+        +pause() bool
+        +resume() bool
+        +end()
+    }
+
+    class PomodoroManager {
+        +start(goal_id, work_minutes) bool
+        +stop()
+    }
+
+    class NotificationService {
+        +show(title, message)
+    }
+
+    class MainWindow
+    class TimerWindow
+    class SystemTray
+    class OverlayManager
+
+    AppController *-- AppServices
+    AppController --> MainWindow
+    AppController --> TimerWindow
+    AppController --> SystemTray
+    AppController --> OverlayManager
+    AppController --> JSBridge
+    AppController --> LocalApiService
+
+    AppServices *-- EventEmitter
+    AppServices *-- TimerManager
+    AppServices *-- PomodoroManager
+    AppServices *-- NotificationService
+    AppServices *-- SessionManager
+
+    JSBridge --> EventEmitter
+    LocalApiService --> RemoteAuthApi
+    PomodoroManager --> TimerManager
+    TimerManager --> EventEmitter
+    SessionManager --> EventEmitter
+    NotificationService --> EventEmitter
+```
+
 ### Main orchestration (`src/main.py`)
 
 `AppController` is the composition root. It:
