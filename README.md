@@ -180,3 +180,10 @@ Contributions welcome! Follow the [web version's Contributing Guide](../Continiu
 ## License
 
 Part of the Continium ecosystem.
+
+## Security Audit 
+
+- Performed security review of Data Access Layer (user.py, goal.py)
+- Verified usage of parameterized queries to prevent SQL Injection
+- Recommended disabling Developer Tools in production builds
+- Conducted input validation testing through JS-Python bridge
