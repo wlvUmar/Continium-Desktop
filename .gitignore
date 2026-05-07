@@ -47,3 +47,4 @@ contribution_report.txt
 pyrightconfig.json
 .github/copilot-instructions.md
 app.db
+settings.ini
