@@ -136,7 +136,7 @@ window.loadSidebarProjects = async function () {
     
     // Fetch and update progress for each sidebar project (initial load)
     active.forEach(g => {
-      _fetchAndUpdateSidebarProgress(g.id, g.duration_min);
+      _fetchAndUpdateSidebarProgress(g.id, g.duration_min, g.type, g.frequency);
     });
 
     // Start polling for updates
@@ -148,38 +148,32 @@ window.loadSidebarProjects = async function () {
 };
 
 // Fetch today's progress for sidebar project and update progress bar
-async function _fetchAndUpdateSidebarProgress(goalId, durationMin) {
+async function _fetchAndUpdateSidebarProgress(goalId, durationMin, goalType, goalFrequency) {
   try {
     if (!durationMin || durationMin <= 0) {
-      // Even if no duration, still show the time worked
-      const progress = await statsManager.getTodayProgress(goalId, 1, false);
-      const todayMinutes = progress.todayMinutes || 0;
-      
+      const progress = await statsManager.getTodayProgress(goalId, 1, false, goalType, goalFrequency);
+      const displayMin = progress.periodMinutes !== undefined ? progress.periodMinutes : (progress.todayMinutes || 0);
       const sidebarItem = document.querySelector(`.project-item[data-goal-id="${goalId}"]`);
       if (sidebarItem) {
-        const h = Math.floor(todayMinutes / 60);
-        const m = todayMinutes % 60;
+        const h = Math.floor(displayMin / 60);
+        const m = displayMin % 60;
         const timeText = sidebarItem.querySelector('.project-progress-text');
         if (timeText) timeText.textContent = `${h}h ${String(m).padStart(2, "0")}m`;
       }
       return;
     }
-    
-    // Use stats manager for fetching and caching
-    const progress = await statsManager.getTodayProgress(goalId, durationMin, false);
+
+    const progress = await statsManager.getTodayProgress(goalId, durationMin, false, goalType, goalFrequency);
     const progressPercent = progress.percentage;
-    const totalMinutes = progress.totalMinutes || 0;
-    
-    // Update sidebar item progress bar
+    const displayMin = progress.periodMinutes !== undefined ? progress.periodMinutes : (progress.totalMinutes || 0);
+
     const sidebarItem = document.querySelector(`.project-item[data-goal-id="${goalId}"]`);
     if (sidebarItem) {
-      // Update progress bar width
       const fill = sidebarItem.querySelector('.project-progress-fill');
       if (fill) fill.style.width = progressPercent + '%';
-      
-      // Update time text - show TOTAL time worked
-      const h = Math.floor(totalMinutes / 60);
-      const m = totalMinutes % 60;
+
+      const h = Math.floor(displayMin / 60);
+      const m = displayMin % 60;
       const timeText = sidebarItem.querySelector('.project-progress-text');
       if (timeText) timeText.textContent = `${h}h ${String(m).padStart(2, "0")}m / ${Math.floor(durationMin/60)}h ${(durationMin%60).toString().padStart(2, "0")}m`;
     }
@@ -189,22 +183,20 @@ async function _fetchAndUpdateSidebarProgress(goalId, durationMin) {
 }
 
 // Register callback for stats updates from polling
-statsManager.subscribe((goalId, todayMinutes, totalMinutes, percentage) => {
-  // Find all sidebar items for this goal and update them
+statsManager.subscribe((goalId, todayMinutes, totalMinutes, percentage, periodMinutes) => {
+  const displayMin = periodMinutes !== undefined ? periodMinutes : totalMinutes;
   document.querySelectorAll(`.project-item[data-goal-id="${goalId}"]`).forEach(sidebarItem => {
-    // Update progress bar
     const fill = sidebarItem.querySelector('.project-progress-fill');
     if (fill) fill.style.width = percentage + '%';
-    
-    // Update time text - show TOTAL time worked
+
     const timeText = sidebarItem.querySelector('.project-progress-text');
     if (timeText) {
       const durationStr = timeText.textContent || '';
       const match = durationStr.match(/\/ (\d+)h (\d+)m/);
       if (match) {
         const durationMin = parseInt(match[1]) * 60 + parseInt(match[2]);
-        const h = Math.floor(totalMinutes / 60);
-        const m = totalMinutes % 60;
+        const h = Math.floor(displayMin / 60);
+        const m = displayMin % 60;
         timeText.textContent = `${h}h ${String(m).padStart(2, "0")}m / ${Math.floor(durationMin/60)}h ${(durationMin%60).toString().padStart(2, "0")}m`;
       }
     }

@@ -11,6 +11,7 @@ const statsManager = {
     _cache: {},           // { goalId: { todayMinutes, lastFetch, goalDurationMin } }
     _callbacks: [],       // Registered listeners for updates
     _goalDurations: {},   // Store goal durations for polling
+    _goalMeta: {},        // { goalId: { type, frequency } } for period calc
     _pollInterval: null,
     _pollIntervalMs: 5000, // Poll every 5 seconds
 
@@ -30,18 +31,43 @@ const statsManager = {
         this._callbacks = this._callbacks.filter(cb => cb !== callback);
     },
 
+    _periodMinutes(goalId, stats) {
+        const meta = this._goalMeta[goalId] || {};
+        const type = meta.type || 'Repeating';
+        const freq = meta.frequency || 'daily';
+        if (type === 'One Time') {
+            return stats.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+        }
+        const now = new Date();
+        if (freq === 'weekly') {
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - now.getDay());
+            weekStart.setHours(0, 0, 0, 0);
+            return stats.filter(s => new Date(s.occurred_at) >= weekStart)
+                        .reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+        }
+        if (freq === 'monthly') {
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            return stats.filter(s => new Date(s.occurred_at) >= monthStart)
+                        .reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+        }
+        // daily (default)
+        const today = now.toISOString().split('T')[0];
+        return stats.filter(s => s.occurred_at.split('T')[0] === today)
+                    .reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+    },
+
     /**
      * Notify all listeners of an update
      */
-    _notifyListeners(goalId, todayMinutes, totalMinutes) {
-        // Pass percentage so callbacks don't need to recalculate
+    _notifyListeners(goalId, todayMinutes, totalMinutes, stats) {
         const durationMin = this._goalDurations[goalId] || 0;
-        // Calculate percentage based on TOTAL progress, not just today
-        const percentage = durationMin > 0 ? Math.min(100, Math.round((totalMinutes / durationMin) * 100)) : 0;
-        
+        const periodMin = this._periodMinutes(goalId, stats || []);
+        const percentage = durationMin > 0 ? Math.min(100, Math.round((periodMin / durationMin) * 100)) : 0;
+
         this._callbacks.forEach(cb => {
             try {
-                cb(goalId, todayMinutes, totalMinutes, percentage);
+                cb(goalId, todayMinutes, totalMinutes, percentage, periodMin);
             } catch (e) {
                 console.error('❌ STATS: Callback error:', e);
             }
@@ -52,12 +78,14 @@ const statsManager = {
      * Get today's progress for a goal (with caching)
      * Returns: { todayMinutes, totalMinutes, percentage }
      */
-    async getTodayProgress(goalId, goalDurationMin = 0, forceRefresh = false) {
+    async getTodayProgress(goalId, goalDurationMin = 0, forceRefresh = false, goalType = null, goalFrequency = null) {
         const now = Date.now();
-        
-        // Store goal duration for polling later
+
         if (goalDurationMin > 0) {
             this._goalDurations[goalId] = goalDurationMin;
+        }
+        if (goalType !== null) {
+            this._goalMeta[goalId] = { type: goalType, frequency: goalFrequency || 'daily' };
         }
         
         // Prevent fetching if unauthenticated
@@ -83,19 +111,16 @@ const statsManager = {
             const todayStats = stats.filter(s => s.occurred_at.split('T')[0] === today);
             const todayMinutes = todayStats.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
             const totalMinutes = stats.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
-            
-            // Use stored duration or fallback to parameter
+
             const durationMin = this._goalDurations[goalId] || goalDurationMin;
-            // Calculate percentage based on TOTAL progress, not just today
-            const percentage = durationMin > 0 ? Math.min(100, Math.round((totalMinutes / durationMin) * 100)) : 0;
+            const periodMin = this._periodMinutes(goalId, stats);
+            const percentage = durationMin > 0 ? Math.min(100, Math.round((periodMin / durationMin) * 100)) : 0;
 
-            const data = { todayMinutes, totalMinutes, percentage, stats };
+            const data = { todayMinutes, totalMinutes, periodMinutes: periodMin, percentage, stats };
 
-            // Cache the result
             this._cache[goalId] = { data, lastFetch: now };
 
-            // Notify listeners
-            this._notifyListeners(goalId, todayMinutes, totalMinutes);
+            this._notifyListeners(goalId, todayMinutes, totalMinutes, stats);
 
 
             return data;

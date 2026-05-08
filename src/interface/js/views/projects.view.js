@@ -54,7 +54,7 @@ function _createGoalsList(goals) {
 }
 
 async function _updateGoalsProgress(goals) {
-    statsManager.subscribe((goalId, todayMinutes, totalMinutes, percentage) => {
+    statsManager.subscribe((goalId, todayMinutes, totalMinutes, percentage, periodMinutes) => {
         const goal   = goals.find(g => g.id === goalId);
         if (!goal) return;
         const cardEl = document.querySelector(`[data-goal-id="${goalId}"]`);
@@ -67,8 +67,9 @@ async function _updateGoalsProgress(goals) {
         if (pct) pct.textContent = percentage + '%';
 
         const durationMin = goal.duration_min || 0;
-        const h = Math.floor(totalMinutes / 60);
-        const m = totalMinutes % 60;
+        const displayMin = periodMinutes !== undefined ? periodMinutes : totalMinutes;
+        const h = Math.floor(displayMin / 60);
+        const m = displayMin % 60;
         const timeDisplay = durationMin > 0
             ? `${h}h ${String(m).padStart(2, '0')}m / ${_fmtMin(durationMin)}`
             : `${h}h ${String(m).padStart(2, '0')}m`;
@@ -78,7 +79,7 @@ async function _updateGoalsProgress(goals) {
 
     for (const goal of goals) {
         const durationMin = goal.duration_min || 0;
-        const progress    = await statsManager.getTodayProgress(goal.id, durationMin, false);
+        const progress    = await statsManager.getTodayProgress(goal.id, durationMin, false, goal.type, goal.frequency);
         const cardEl      = document.querySelector(`[data-goal-id="${goal.id}"]`);
         if (!cardEl) continue;
 
@@ -88,9 +89,9 @@ async function _updateGoalsProgress(goals) {
         const pct = cardEl.querySelector('.project-card-percentage');
         if (pct) pct.textContent = progress.percentage + '%';
 
-        const totalMinutes = progress.totalMinutes || 0;
-        const h = Math.floor(totalMinutes / 60);
-        const m = totalMinutes % 60;
+        const displayMin = progress.periodMinutes !== undefined ? progress.periodMinutes : (progress.totalMinutes || 0);
+        const h = Math.floor(displayMin / 60);
+        const m = displayMin % 60;
         const timeDisplay = durationMin > 0
             ? `${h}h ${String(m).padStart(2, '0')}m / ${_fmtMin(durationMin)}`
             : `${h}h ${String(m).padStart(2, '0')}m`;
