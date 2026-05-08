@@ -64,6 +64,71 @@ window.switchPeriod = function(period, btn) {
 window.prevPeriod = function() { _periodOffset--; _loadPeriodData(); };
 window.nextPeriod = function() { _periodOffset++; _loadPeriodData(); };
 
+window.startEditGoalTitle = function() {
+    const titleEl = document.getElementById('goalDetailTitle');
+    if (!titleEl || titleEl.querySelector('input')) return;
+    const current = titleEl.textContent.trim();
+    titleEl.textContent = '';
+    const input = document.createElement('input');
+    input.className = 'goal-title-input';
+    input.type = 'text';
+    input.maxLength = 100;
+    input.value = current;
+    titleEl.appendChild(input);
+    input.focus();
+    input.select();
+
+    async function save() {
+        const newTitle = input.value.trim();
+        if (!newTitle || newTitle === current) { titleEl.textContent = current; return; }
+        try {
+            await goalsService.updateGoal(_currentGoalId, { title: newTitle });
+            titleEl.textContent = newTitle;
+        } catch (_) {
+            titleEl.textContent = current;
+            Toast.error('Failed to rename goal');
+        }
+    }
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { input.blur(); }
+        if (e.key === 'Escape') { input.removeEventListener('blur', save); titleEl.textContent = current; }
+    });
+};
+
+window.confirmDeleteGoal = function() {
+    const title = document.getElementById('goalDetailTitle')?.textContent?.trim() || 'this goal';
+    document.getElementById('goalDeleteModal')?.remove();
+    const modal = document.createElement('div');
+    modal.id = 'goalDeleteModal';
+    modal.className = 'goal-delete-modal-overlay';
+    modal.innerHTML = `
+        <div class="goal-delete-modal">
+            <div class="goal-delete-modal-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+            </div>
+            <div class="goal-delete-modal-title">Delete "${title}"?</div>
+            <div class="goal-delete-modal-subtitle">This action cannot be undone</div>
+            <button class="goal-delete-modal-btn" onclick="document.getElementById('goalDeleteModal').remove()">&#8594; Cancel</button>
+            <button class="goal-delete-modal-btn danger" onclick="window.executeDeleteGoal()">&#8594; Delete</button>
+        </div>`;
+    document.body.appendChild(modal);
+};
+
+window.executeDeleteGoal = async function() {
+    document.getElementById('goalDeleteModal')?.remove();
+    try {
+        await goalsService.deleteGoal(_currentGoalId);
+        router.navigate('/projects');
+    } catch (_) {
+        Toast.error('Failed to delete goal');
+    }
+};
+
 function _updateProgressBar(tab) {
     const stats      = tab === 'today' ? _todayStats : _periodStats;
     const totalMin   = stats.reduce((sum, s) => sum + s.duration_minutes, 0);

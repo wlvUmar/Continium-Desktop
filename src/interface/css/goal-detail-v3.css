@@ -373,6 +373,151 @@ body.dark-mode .y-axis-labels {
     transform: scale(0.95);
 }
 
+/* ============ TITLE ROW (edit + delete) ============ */
+.goal-detail-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 28px;
+}
+
+.goal-detail-title-row .goal-detail-title {
+    margin-bottom: 0;
+}
+
+.goal-detail-edit-btn {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #9AA5B4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: color 0.18s;
+}
+
+.goal-detail-edit-btn svg { width: 16px; height: 16px; }
+.goal-detail-edit-btn:hover { color: #07B6D5; }
+
+.goal-detail-delete-btn {
+    margin-left: auto;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #E53935;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    flex-shrink: 0;
+    transition: background 0.18s;
+}
+
+.goal-detail-delete-btn svg { width: 18px; height: 18px; }
+.goal-detail-delete-btn:hover { background: rgba(229, 57, 53, 0.1); }
+
+.goal-title-input {
+    font-size: 28px;
+    font-weight: 900;
+    color: #323E52;
+    font-family: 'Inter', sans-serif;
+    border: none;
+    border-bottom: 2px solid #07B6D5;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    min-width: 120px;
+    padding: 0;
+}
+
+body.dark-mode .goal-title-input { color: #E0E0E0; }
+
+/* ============ DELETE CONFIRM MODAL ============ */
+.goal-delete-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.goal-delete-modal {
+    background: #fff;
+    border-radius: 14px;
+    padding: 24px 22px 20px;
+    width: 270px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+
+body.dark-mode .goal-delete-modal {
+    background: #2d3142;
+}
+
+.goal-delete-modal-icon svg {
+    width: 30px;
+    height: 30px;
+    color: #07B6D5;
+}
+
+.goal-delete-modal-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1A2233;
+    font-family: 'Inter', sans-serif;
+}
+
+body.dark-mode .goal-delete-modal-title { color: #E0E0E0; }
+
+.goal-delete-modal-subtitle {
+    font-size: 13px;
+    color: #888;
+    font-family: 'Inter', sans-serif;
+    margin-bottom: 4px;
+}
+
+.goal-delete-modal-btn {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #D0D5DD;
+    background: #fff;
+    color: #333;
+    font-family: 'Inter', sans-serif;
+    text-align: left;
+    transition: background 0.15s;
+}
+
+.goal-delete-modal-btn:hover { background: #F5F5F5; }
+
+.goal-delete-modal-btn.danger {
+    color: #E53935;
+    border-color: #E53935;
+}
+
+.goal-delete-modal-btn.danger:hover { background: rgba(229,57,53,0.07); }
+
+body.dark-mode .goal-delete-modal-btn {
+    background: #3a3f55;
+    border-color: #505570;
+    color: #E0E0E0;
+}
+
+body.dark-mode .goal-delete-modal-btn:hover { background: #454b65; }
+
 /* ============ RESPONSIVE ============ */
 @media (max-width: 768px) {
     .goal-detail-container {

@@ -554,7 +554,12 @@ window.focusToggle = function() {
             _focusRingLastTickMs = performance.now();
             _focusSyncSegmentStateFromElapsed();
             _focusUpdateDisplay();
-            
+
+            if (_focusTimerElapsed >= _focusTimerGoalSeconds) {
+                _focusHandleGoalComplete();
+                return;
+            }
+
             if (window.bridge) {
                 window.bridge.emit('timer:tick', {
                     remaining_seconds: Math.max(0, _focusTimerGoalSeconds - _focusTimerElapsed),
@@ -604,19 +609,61 @@ window.focusReset = function() {
     }
 };
 
-window.focusNextSegment = function() {
+async function _focusHandleGoalComplete() {
+    clearInterval(_focusTimerInterval);
+    _focusTimerRunning = false;
+    _focusStopRingAnimation();
+    const playBtn = document.getElementById('focusPlayBtn');
+    if (playBtn) playBtn.classList.add('paused');
+    _focusSetPlayButtonState(false);
+
+    _focusTimerElapsed = _focusTimerGoalSeconds;
+    _focusRingVisualElapsed = _focusTimerGoalSeconds;
+    _focusUpdateDisplay();
+
+    await _focusSaveSession();
+
+    if (_focusModalGoalId) {
+        try {
+            await goalsService.updateGoal(_focusModalGoalId, { is_complete: true, status: 'completed' });
+            Toast.success('Goal completed!');
+        } catch (err) {
+            console.error('Failed to mark goal complete', err);
+        }
+    }
+}
+
+window.focusNextSegment = async function() {
     if (_focusCurrentSegmentIndex >= FOCUS_POMODORO_SEGMENTS) {
         _focusCurrentSegmentIndex = Math.max(0, FOCUS_POMODORO_SEGMENTS - 1);
     }
     const wasRunning = _focusTimerRunning;
+
+    // Stop interval directly so the top bar doesn't jump from a mid-segment save
     if (_focusTimerRunning) {
-        window.focusToggle();
+        clearInterval(_focusTimerInterval);
+        _focusTimerRunning = false;
+        _focusStopRingAnimation();
+        const playBtn = document.getElementById('focusPlayBtn');
+        if (playBtn) playBtn.classList.add('paused');
+        _focusSetPlayButtonState(false);
     }
+
+    // Save only real work done before the skip
+    await _focusSaveSession();
+
     const currentEnd = _focusGetSegmentEnd(_focusCurrentSegmentIndex);
     _focusTimerElapsed = Math.min(currentEnd, _focusTimerGoalSeconds);
     _focusRingVisualElapsed = _focusTimerElapsed;
+    _focusSessionStart = _focusTimerElapsed; // skipped time excluded from future saves
     _focusCurrentSegmentIndex = Math.min(_focusCurrentSegmentIndex + 1, Math.max(0, FOCUS_POMODORO_SEGMENTS - 1));
     _focusUpdateDisplay();
+
+    if (_focusTimerElapsed >= _focusTimerGoalSeconds) {
+        _focusHandleGoalComplete();
+        return;
+    }
+
     if (wasRunning) { window.focusToggle(); }
 };
 
