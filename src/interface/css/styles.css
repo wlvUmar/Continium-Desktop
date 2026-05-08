@@ -457,12 +457,11 @@ body.dark-mode .search-input-pill:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(244, 244, 248, 0.6);
+  background: rgba(244, 244, 248, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(2px);
 }
 
 .profile-modal {
@@ -1038,12 +1037,11 @@ body.dark-mode .empty-state p {
    left: 0;
    right: 0;
    bottom: 0;
-   background: rgba(244, 244, 248, 0.6);
+   background: rgba(244, 244, 248, 0.75);
    display: flex;
    align-items: center;
    justify-content: center;
    z-index: 1000;
-   backdrop-filter: blur(2px);
 }
 
 .add-goal-modal {
