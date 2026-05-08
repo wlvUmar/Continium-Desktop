@@ -406,12 +406,11 @@ body.dark-mode .y-axis-labels {
 
 .goal-detail-delete-btn {
     margin-left: auto;
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: none;
+    width: 36px;
+    height: 36px;
+    border: 1.5px solid #E53935;
+    background: rgba(229, 57, 53, 0.08);
     cursor: pointer;
-    color: #E53935;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -420,8 +419,8 @@ body.dark-mode .y-axis-labels {
     transition: background 0.18s;
 }
 
-.goal-detail-delete-btn svg { width: 18px; height: 18px; }
-.goal-detail-delete-btn:hover { background: rgba(229, 57, 53, 0.1); }
+.goal-detail-delete-btn svg { width: 20px; height: 20px; }
+.goal-detail-delete-btn:hover { background: rgba(229, 57, 53, 0.18); }
 
 .goal-title-input {
     font-size: 28px;
