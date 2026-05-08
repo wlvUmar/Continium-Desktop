@@ -62,7 +62,16 @@ async function apiRequest(endpoint, options = {}) {
       const isAuthRefresh = endpoint === '/auth/refresh';
       const alreadyRetried = !!options.__retriedAfterRefresh;
 
-      if (!isAuthLogin && !isAuthRefresh && !alreadyRetried && window.authService?.refreshToken) {
+      // For login failures return the actual server error, not a misleading "session expired"
+      if (isAuthLogin) {
+        const errDetail = response?.error?.detail || response?.error?.message;
+        const msg = Array.isArray(errDetail)
+          ? errDetail.map(e => e.msg || JSON.stringify(e)).join(', ')
+          : (errDetail || 'Invalid email or password.');
+        return Promise.reject(new Error(msg));
+      }
+
+      if (!isAuthRefresh && !alreadyRetried && window.authService?.refreshToken) {
         try {
           const refreshed = await window.authService.refreshToken();
           if (refreshed) {
