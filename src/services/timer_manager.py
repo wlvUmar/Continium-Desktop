@@ -17,8 +17,8 @@ JOIN_TIMEOUT_SEC = 1
 class TimerState:
 
     goal_id: int | None
-    duration_seconds: int
-    remaining_seconds: int
+    duration_seconds: int | float
+    remaining_seconds: int | float
     is_running: bool
     is_paused: bool
 
@@ -153,7 +153,7 @@ class TimerManager:
             return True
         return False
 
-    def _decrement(self) -> int:
+    def _decrement(self) -> int | float:
         with self._lock:
             if not self._is_running:
                 return self._remaining_seconds

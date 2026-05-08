@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable
 
-from PyQt6.QtCore import QPoint, QTimer, QSize, Qt
-from PyQt6.QtGui import QAction, QGuiApplication, QIcon, QColor
+from PyQt6.QtCore import QPoint, QTimer, QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QAction, QGuiApplication, QIcon, QColor, QMouseEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QGraphicsDropShadowEffect,
@@ -25,36 +25,16 @@ from core.window import MainWindow
 from dal import SessionLocal
 from models.goal import Goal
 from utils.paths import resource_dir
-
+from utils.styles import tray_stylesheet
 logger = logging.getLogger("continium")
 
-TRAY_THEME_TOKENS: dict[str, dict[str, str]] = {
-    "light": {
-        "menu_bg": "#F4F9FB",
-        "menu_text": "#36465D",
-        "menu_border": "#D9E4EC",
-        "item_hover_bg": "#E8F5F7",
-        "item_hover_text": "#07B6D5",
-        "separator": "#D9E4EC",
-        "row_bg": "#FFFFFF",
-        "project_name": "#475A6C",
-        "project_meta": "#7A8A9A",
-        "icon_label": "#475A6C",
-    },
-    "dark": {
-        "menu_bg": "#1A1631",
-        "menu_text": "#E0E0E0",
-        "menu_border": "#2A2A4A",
-        "item_hover_bg": "#292736",
-        "item_hover_text": "#7FD7E8",
-        "separator": "#2A2A4A",
-        "row_bg": "#15122A",
-        "project_name": "#D8E1EA",
-        "project_meta": "#98A8B8",
-        "icon_label": "#D8E1EA",
-    },
-}
 
+class ClickableRow(QWidget):
+    clicked = pyqtSignal()
+
+    def mousePressEvent(self, a0: QMouseEvent | None) -> None:
+        self.clicked.emit()
+        super().mousePressEvent(a0)
 
 class SystemTray:
     """Manages the system tray icon and menu actions with project quick-launch."""
@@ -77,7 +57,7 @@ class SystemTray:
         """Apply active UI theme to tray menu colors."""
         normalized = (mode or "light").strip().lower()
         self._theme_mode = "dark" if normalized == "dark" else "light"
-        self._setup_stylesheet()
+        self._menu.setStyleSheet(tray_stylesheet(self._theme_mode))
 
     def _load_icon(self, name="icon") -> QIcon:
         resources = resource_dir()
@@ -167,10 +147,17 @@ class SystemTray:
             print(f"Error loading goals: {e}")
             return []
 
-    def _icon_button_action(self, label: str, callback: Callable[[], None], icon_name: str, color: QColor | None = None) -> QWidgetAction:
-        """Create an icon button row that fits the menu style."""
+    def _icon_button_action(
+        self,
+        label: str,
+        callback: Callable[[], None],
+        icon_name: str,
+        color: QColor | None = None
+    ) -> QWidgetAction:
+
         action = QWidgetAction(self._menu)
-        row = QWidget(self._menu)
+
+        row = ClickableRow(self._menu)
         row.setObjectName("trayIconRow")
 
         row_layout = QHBoxLayout(row)
@@ -185,14 +172,13 @@ class SystemTray:
         btn.setFlat(True)
         btn.setToolTip(label)
 
-        # Add color effect if color is specified
+        # effects
         if color:
-            colorize = QGraphicsColorizeEffect()
-            colorize.setColor(color)
-            colorize.setStrength(0.8)
-            btn.setGraphicsEffect(colorize)
+            effect = QGraphicsColorizeEffect()
+            effect.setColor(color)
+            effect.setStrength(0.8)
+            btn.setGraphicsEffect(effect)
         else:
-            # Add drop shadow effect
             shadow = QGraphicsDropShadowEffect()
             shadow.setBlurRadius(8)
             shadow.setOffset(0, 2)
@@ -201,28 +187,31 @@ class SystemTray:
 
         def safe_callback() -> None:
             try:
-                logger.debug(f"Icon button clicked: {label}")
+                logging.debug(f"Icon button clicked: {label}")
                 callback()
             except Exception as e:
-                logger.exception(f"Error in {label} callback: {e}")
+                logging.exception(f"Error in {label} callback: {e}")
 
         btn.clicked.connect(safe_callback)
+
+        # row click = same action
+        row.clicked.connect(safe_callback)
+
         row_layout.addWidget(btn)
 
         label_widget = QLabel(label, row)
         label_widget.setObjectName("trayIconLabel")
         row_layout.addWidget(label_widget, 1)
 
-        # Make the entire row clickable
-        row.mousePressEvent = lambda event: safe_callback()
-
         action.setDefaultWidget(row)
         return action
 
     def _project_row_action(self, goal_id: int, title: str, duration_min: int) -> QWidgetAction:
         """Create a project row with play button and project details."""
+
         action = QWidgetAction(self._menu)
-        row = QWidget(self._menu)
+
+        row = ClickableRow(self._menu)
         row.setObjectName("trayProjectRow")
 
         row_layout = QHBoxLayout(row)
@@ -237,16 +226,19 @@ class SystemTray:
         start_btn.setFlat(True)
         start_btn.setToolTip("Start timer")
 
-        # Add drop shadow effect
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(8)
         shadow.setOffset(0, 2)
         shadow.setColor(QColor(0, 0, 0, 80))
         start_btn.setGraphicsEffect(shadow)
 
-        start_btn.clicked.connect(lambda _checked=False: self._start_timer(goal_id, duration_min))
+        start_btn.clicked.connect(
+            lambda _checked=False: self._start_timer(goal_id, duration_min)
+        )
+
         row_layout.addWidget(start_btn)
 
+        # ── details ────────────────────────────────
         details = QWidget(row)
         details_layout = QVBoxLayout(details)
         details_layout.setContentsMargins(0, 0, 0, 0)
@@ -262,24 +254,18 @@ class SystemTray:
         meta_label.setObjectName("trayProjectMeta")
         details_layout.addWidget(meta_label)
 
-        # Let the row receive clicks even when clicking labels/details.
         details.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
         row_layout.addWidget(details, 1)
         row.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        def on_row_click(event: Any) -> None:
-            clicked_widget = row.childAt(event.position().toPoint())
-            if clicked_widget is start_btn:
-                return
-            if clicked_widget is not None and start_btn.isAncestorOf(clicked_widget):
-                return
+        def on_row_click() -> None:
             self._open_goal_detail(goal_id)
 
-        row.mousePressEvent = on_row_click
+        row.clicked.connect(on_row_click)
+
         action.setDefaultWidget(row)
         return action
-
     def _start_timer(self, goal_id: int, duration_min: int) -> None:
         """Start a timer for the selected goal."""
         try:
@@ -325,75 +311,7 @@ class SystemTray:
             self._window.allow_exit()
         self._app.quit()
 
-    def _setup_stylesheet(self) -> None:
-        tokens = TRAY_THEME_TOKENS[self._theme_mode]
-        stylesheet = """
-            QMenu {
-                background: __MENU_BG__;
-                color: __MENU_TEXT__;
-                border: 1px solid __MENU_BORDER__;
-                border-radius: 8px;
-                padding: 8px;
-            }
-            QMenu::item:selected {
-                background: __ITEM_HOVER_BG__;
-                color: __ITEM_HOVER_TEXT__;
-            }
-            QMenu::separator {
-                background: __SEPARATOR__;
-                margin: 4px 0px;
-            }
-            #trayProjectRow {
-                background: __ROW_BG__;
-                border-radius: 10px;
-            }
-            #trayProjectName {
-                color: __PROJECT_NAME__;
-                font-weight: 700;
-                font-size: 13px;
-            }
-            #trayProjectMeta {
-                color: __PROJECT_META__;
-                font-size: 11px;
-            }
-            #trayStartButton {
-                background: transparent;
-                border: none;
-                padding: 0px;
-            }
-            #trayIconRow {
-                background: __ROW_BG__;
-                border-radius: 10px;
-            }
-            #trayIconButton {
-                background: transparent;
-                border: none;
-                padding: 0px;
-            }
-            #trayIconLabel {
-                color: __ICON_LABEL__;
-                font-weight: 700;
-                font-size: 13px;
-            }
-            QPushButton {
-                background: transparent;
-                border: none;
-                padding: 0px;
-            }
-        """
-        self._menu.setStyleSheet(
-            stylesheet
-            .replace("__MENU_BG__", tokens["menu_bg"])
-            .replace("__MENU_TEXT__", tokens["menu_text"])
-            .replace("__MENU_BORDER__", tokens["menu_border"])
-            .replace("__ITEM_HOVER_BG__", tokens["item_hover_bg"])
-            .replace("__ITEM_HOVER_TEXT__", tokens["item_hover_text"])
-            .replace("__SEPARATOR__", tokens["separator"])
-            .replace("__ROW_BG__", tokens["row_bg"])
-            .replace("__PROJECT_NAME__", tokens["project_name"])
-            .replace("__PROJECT_META__", tokens["project_meta"])
-            .replace("__ICON_LABEL__", tokens["icon_label"])
-        )
+    
 
     def _action(self, label: str, callback: Callable[[], None]) -> QAction:
         action = QAction(label, self._menu)

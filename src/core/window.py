@@ -1,5 +1,3 @@
-"""Main application window."""
-
 from __future__ import annotations
 
 import os
@@ -7,7 +5,7 @@ import sys
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, QSize, QUrl, QUrlQuery, Qt
-from PyQt6.QtGui import QCloseEvent, QIcon, QKeySequence, QMouseEvent, QShortcut
+from PyQt6.QtGui import QIcon, QMouseEvent, QCloseEvent
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (
@@ -22,47 +20,21 @@ from PyQt6.QtWidgets import (
 from utils.paths import interface_dir as packaged_interface_dir
 from utils.paths import app_data_dir
 from utils.paths import resource_dir
+from utils.styles import window_stylesheet
 
-DEFAULT_WINDOW_SIZE = QSize(1024, 768)
-
-WINDOW_THEME_TOKENS: dict[str, dict[str, str]] = {
-    "light": {
-        "top_bg": "#F4F9FB",
-        "top_border": "#D9E4EC",
-        "title_text": "#36465D",
-        "button_text": "#475A6C",
-        "button_hover": "#E6EFF4",
-        "close_hover": "#E85C5C",
-    },
-    "dark": {
-        "top_bg": "#1A1631",
-        "top_border": "#2A2A4A",
-        "title_text": "#E0E0E0",
-        "button_text": "#D0D6E0",
-        "button_hover": "#292736",
-        "close_hover": "#D94A4A",
-    },
-}
 
 
 class MainWindow(QMainWindow):
-    """Main application window hosting the web UI."""
-
     def __init__(
         self,
         interface_dir: Path | None = None,
         api_base_url: str | None = None,
-        devtools_enabled: bool = False,
     ) -> None:
         super().__init__()
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
         self.setWindowTitle("Continium")
         self.setWindowIcon(self._load_icon())
         self._api_base_url = api_base_url
-        self._devtools_enabled = devtools_enabled
-        self._devtools_window: QMainWindow | None = None
-        self._devtools_view: QWebEngineView | None = None
-        self._devtools_shortcuts: list[QShortcut] = []
         self._allow_exit = False
         self._drag_pos = QPoint()
         self._theme_mode = "light"
@@ -73,14 +45,9 @@ class MainWindow(QMainWindow):
         """Apply top-bar colors to match active web UI theme."""
         normalized = (mode or "light").strip().lower()
         self._theme_mode = "dark" if normalized == "dark" else "light"
-        self.setStyleSheet(self._get_stylesheet())
+        self.setStyleSheet(window_stylesheet(self._theme_mode))
 
     def shutdown_webengine(self) -> None:
-        if self._devtools_window is not None:
-            self._devtools_window.close()
-            self._devtools_window.deleteLater()
-            self._devtools_window = None
-            self._devtools_view = None
         if isinstance(self.web_view, QWebEngineView):
             page = self.web_view.page()
             if page is not None:
@@ -90,13 +57,15 @@ class MainWindow(QMainWindow):
         """Allow explicit close when user chooses Quit from tray."""
         self._allow_exit = True
 
-    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
+    def closeEvent(self, a0: QCloseEvent | None) -> None:  # noqa: N802
         """Hide to tray on close button, only exit when explicitly requested."""
-        if self._allow_exit:
-            event.accept()
-            return
-        event.ignore()
-        self.hide()
+        if a0:
+            if self._allow_exit:
+                a0.accept()
+                return
+            
+            a0.ignore()
+            self.hide()
 
     def _setup_ui(self, interface_dir: Path | None) -> None:
         """Create custom title bar and layout."""
@@ -141,17 +110,17 @@ class MainWindow(QMainWindow):
 
         root_layout.addWidget(self.top_bar)
 
-        # Web view
         self.web_view = self._create_web_view()
         root_layout.addWidget(self.web_view)
-        self.resize(DEFAULT_WINDOW_SIZE)
+        self.resize(QSize(1024, 768))
         self._load_interface(interface_dir)
-        self._setup_devtools_shortcuts()
 
-        # Title bar drag handlers
         self.top_bar.mousePressEvent = self._title_bar_mouse_press
         self.top_bar.mouseMoveEvent = self._title_bar_mouse_move
-        self.top_bar.mouseDoubleClickEvent = lambda _: self._toggle_maximize()
+        self.top_bar.mouseDoubleClickEvent = self._title_bar_mouse_double_click
+
+    def _title_bar_mouse_double_click(self, a0: QMouseEvent | None) -> None:
+        self._toggle_maximize()
 
     def _toggle_maximize(self) -> None:
         """Toggle between normal and maximized window state."""
@@ -160,59 +129,24 @@ class MainWindow(QMainWindow):
         else:
             self.showMaximized()
 
-    def _title_bar_mouse_press(self, event: QMouseEvent) -> None:
-        """Record drag start position for window dragging."""
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+    def _title_bar_mouse_press(self, a0: QMouseEvent | None) -> None:
+        if a0 is None:
+            return
+        if a0.button() == Qt.MouseButton.LeftButton:
+            self._drag_pos = a0.globalPosition().toPoint() - self.frameGeometry().topLeft()
 
-    def _title_bar_mouse_move(self, event: QMouseEvent) -> None:
-        """Drag window when title bar is clicked and moved."""
-        if (event.buttons() & Qt.MouseButton.LeftButton) != Qt.MouseButton.NoButton and not self.isMaximized():
-            self.move(event.globalPosition().toPoint() - self._drag_pos)
 
-    def _get_stylesheet(self) -> str:
-        """Return stylesheet for custom title bar."""
-        tokens = WINDOW_THEME_TOKENS[self._theme_mode]
-        stylesheet = """
-            #topBar {
-                background: __TOP_BG__;
-                border-bottom: 1px solid __TOP_BORDER__;
-            }
-            #titleLabel {
-                font-weight: 700;
-                font-size: 16px;
-                color: __TITLE_TEXT__;
-            }
-            #titleButton, #closeButton {
-                background: transparent;
-                color: __BUTTON_TEXT__;
-                border: none;
-                padding: 6px 10px;
-                border-radius: 4px;
-                font-weight: 600;
-                font-size: 18px;
-            }
-            #titleButton:hover {
-                background: __BUTTON_HOVER__;
-            }
-            #closeButton:hover {
-                background: __CLOSE_HOVER__;
-                color: white;
-            }
-        """
-        return (
-            stylesheet
-            .replace("__TOP_BG__", tokens["top_bg"])
-            .replace("__TOP_BORDER__", tokens["top_border"])
-            .replace("__TITLE_TEXT__", tokens["title_text"])
-            .replace("__BUTTON_TEXT__", tokens["button_text"])
-            .replace("__BUTTON_HOVER__", tokens["button_hover"])
-            .replace("__CLOSE_HOVER__", tokens["close_hover"])
-        )
+    def _title_bar_mouse_move(self, a0: QMouseEvent | None) -> None:
+        if a0 is None:
+            return
+        if (a0.buttons() & Qt.MouseButton.LeftButton) and not self.isMaximized():
+            self.move(a0.globalPosition().toPoint() - self._drag_pos)
 
-    def _create_web_view(self) -> QWidget:
+   
+
+    def _create_web_view(self) -> QWebEngineView:
         if _is_test_mode():
-            return QWidget(self)
+            return QWebEngineView(self)
 
         profile_root = app_data_dir() / "webengine"
         storage_path = profile_root / "storage"
@@ -237,47 +171,6 @@ class MainWindow(QMainWindow):
         self._profile = profile
         return view
 
-    def _setup_devtools_shortcuts(self) -> None:
-        if not self._devtools_enabled or not isinstance(self.web_view, QWebEngineView):
-            return
-        self._devtools_shortcuts = [
-            QShortcut(QKeySequence("F12"), self),
-            QShortcut(QKeySequence("Ctrl+Shift+I"), self),
-        ]
-        for shortcut in self._devtools_shortcuts:
-            shortcut.activated.connect(self._toggle_devtools)
-
-    def _toggle_devtools(self) -> None:
-        if not isinstance(self.web_view, QWebEngineView):
-            return
-        if self._devtools_window is not None and self._devtools_window.isVisible():
-            self._devtools_window.close()
-            return
-
-        page = self.web_view.page()
-        if page is None:
-            return
-
-        devtools_window = QMainWindow(self)
-        devtools_window.setWindowTitle("Continium DevTools")
-        devtools_window.resize(1100, 760)
-        devtools_view = QWebEngineView(devtools_window)
-        devtools_page = QWebEnginePage(page.profile(), devtools_view)
-        devtools_view.setPage(devtools_page)
-        page.setDevToolsPage(devtools_page)
-        devtools_window.setCentralWidget(devtools_view)
-
-        def _cleanup_devtools() -> None:
-            current_page = self.web_view.page()
-            if current_page is not None:
-                current_page.setDevToolsPage(None)
-            self._devtools_view = None
-            self._devtools_window = None
-
-        devtools_window.destroyed.connect(_cleanup_devtools)
-        self._devtools_window = devtools_window
-        self._devtools_view = devtools_view
-        devtools_window.show()
 
     def _load_interface(self, interface_dir: Path | None) -> None:
         if not isinstance(self.web_view, QWebEngineView):

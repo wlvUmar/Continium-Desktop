@@ -1,5 +1,3 @@
-"""Filesystem helpers for bundled assets and writable application data."""
-
 from __future__ import annotations
 
 import os
@@ -10,7 +8,6 @@ APP_NAME = "Continium"
 
 
 def project_root() -> Path:
-    """Return the repository root or bundled app root."""
     return Path(__file__).resolve().parents[2]
 
 

@@ -1,4 +1,3 @@
-"""Runtime logging and exception handling helpers."""
 
 from __future__ import annotations
 

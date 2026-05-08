@@ -1,5 +1,3 @@
-"""Python-JavaScript bridge for frontend-backend communication."""
-
 from __future__ import annotations
 
 import json
@@ -60,7 +58,11 @@ class _DispatchProxy(QtCore.QObject):
 
     def _dispatch(self, event: str, payload: dict[str, Any]) -> None:
         script = _build_js_event(event, payload)
-        self._web_view.page().runJavaScript(script)
+        page = self._web_view.page()
+        if page is None:
+            raise RuntimeError("WebEngine page not initialized")
+
+        page.runJavaScript(script)
 
 
 class JSBridge:
@@ -78,7 +80,10 @@ class JSBridge:
         self._api = _BridgeApi(request_handler)
         self._api.event_received.connect(self._on_event_received)
         self._channel.registerObject("bridge", self._api)
-        web_view.page().setWebChannel(self._channel)
+        page = web_view.page()
+        if page is None:
+            raise RuntimeError("WebEngine page not initialized")
+        page.setWebChannel(self._channel)
         self.forward_events(DEFAULT_FORWARD_EVENTS)
 
     def forward_events(self, event_names: Iterable[str]) -> None:

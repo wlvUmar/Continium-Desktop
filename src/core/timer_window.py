@@ -8,10 +8,12 @@ import time
 import base64
 from typing import Any, Callable, cast
 import logging
+from pathlib import Path
+
 
 from PyQt6.QtCore import QSize, QUrl, QUrlQuery, Qt
 from PyQt6 import QtCore
-from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout
@@ -23,48 +25,31 @@ from utils.paths import interface_dir as packaged_interface_dir
 from utils.paths import resource_dir
 from utils.wallpaper import get_windows_wallpaper_path
 
-# Add logging to trace _web_view initialization
 logging.basicConfig(level=logging.DEBUG)
-
-# Timer window will be maximized/fullscreen, but set a reasonable size for non-fullscreen mode
-DEFAULT_TIMER_WINDOW_SIZE = QSize(1024, 768)
 
 
 class TimerWindow(QMainWindow):
-    """Secondary window that loads the focus route for a specific goal."""
-
     window_state_changed = QtCore.pyqtSignal(QtCore.Qt.WindowState)
 
     def __init__(
         self,
-        api_base_url: str,
-        devtools_enabled: bool,
-        interface_dir: str,
+        api_base_url: str | None,
+        interface_dir: str | None,
         shared_profile: QWebEngineProfile,
         events: EventEmitter,
         request_handler: Callable,
     ) -> None:
         super().__init__()
 
-        # Add logging to trace parameter values
-        print(f"Initializing TimerWindow with api_base_url={api_base_url}, devtools_enabled={devtools_enabled}, interface_dir={interface_dir}, shared_profile={shared_profile}, events={events}, request_handler={request_handler}")
-
-        # Assign parameters to instance variables
         self._api_base_url = api_base_url
-        self._devtools_enabled = False
         self._interface_dir = interface_dir
         self._shared_profile = shared_profile
         self._events = events
         self._request_handler = request_handler
-        self._devtools_window: QMainWindow | None = None
-        self._devtools_view: QWebEngineView | None = None
-        self._devtools_shortcuts: list[QShortcut] = []
         self._profile: QWebEngineProfile | None = None
 
-        # Initialize _web_view
         self._web_view = self._create_web_view(shared_profile)
 
-        # Initialize JSBridge if events and request_handler are provided
         if events is not None and request_handler is not None and isinstance(self._web_view, QWebEngineView):
             handler = cast(Callable[[str, str, dict[str, Any], dict[str, Any]], dict[str, Any]], request_handler)
             self._bridge = JSBridge(self._web_view, events, handler)
@@ -79,7 +64,7 @@ class TimerWindow(QMainWindow):
         )
         self.setWindowTitle("Continium Focus")
         self.setWindowIcon(self._load_icon())
-        self.resize(DEFAULT_TIMER_WINDOW_SIZE)
+        self.resize(QSize(1024, 768))
 
         # Remove margins so the web view fills the entire window
         root = QWidget()
@@ -89,23 +74,17 @@ class TimerWindow(QMainWindow):
         root_layout.addWidget(self._web_view)
         self.setCentralWidget(root)
 
-    def changeEvent(self, event):
-        super().changeEvent(event)
-        if event.type() == QtCore.QEvent.Type.WindowStateChange:
+    def changeEvent(self, a0: QtCore.QEvent | None):
+        super().changeEvent(a0)
+
+        if a0 and a0.type() == QtCore.QEvent.Type.WindowStateChange:
             self.window_state_changed.emit(self.windowState())
 
-        # Update window icon
         self.setWindowIcon(self._load_icon())
 
-        # Removed redundant reassignments of instance variables
         logging.debug(f"Window state changed: {self.windowState()}")
 
     def shutdown_webengine(self) -> None:
-        if self._devtools_window is not None:
-            self._devtools_window.close()
-            self._devtools_window.deleteLater()
-            self._devtools_window = None
-            self._devtools_view = None
         if isinstance(self._web_view, QWebEngineView):
             page = self._web_view.page()
             if page is not None:
@@ -116,7 +95,7 @@ class TimerWindow(QMainWindow):
         if not isinstance(self._web_view, QWebEngineView):
             return
 
-        interface_dir = self._interface_dir or packaged_interface_dir()
+        interface_dir = Path(self._interface_dir or packaged_interface_dir())
         index_path = interface_dir / "index.html"
         url = QUrl.fromLocalFile(str(index_path))
 
@@ -145,7 +124,6 @@ class TimerWindow(QMainWindow):
         if self.isMinimized():
             self.showNormal()
 
-        # Fill the screen without native window borders or rounded corners.
         self.showFullScreen()
         self.raise_()
         self.activateWindow()
@@ -168,7 +146,6 @@ class TimerWindow(QMainWindow):
         profile = QWebEngineProfile("ContiniumTimerProfile", self)
         profile.setPersistentStoragePath(str(storage_path))
         if os.name == "nt":
-            # Avoid Windows cache directory lock contention in Chromium disk cache.
             profile.setHttpCacheType(QWebEngineProfile.HttpCacheType.MemoryHttpCache)
         else:
             cache_path = profile_root / "cache"

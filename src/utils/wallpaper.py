@@ -1,5 +1,3 @@
-"""Windows wallpaper utility to capture and provide desktop background."""
-
 from __future__ import annotations
 
 import os

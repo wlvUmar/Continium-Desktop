@@ -5,14 +5,11 @@ import os
 import sys
 from typing import Any
 
-if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-    sys.path.insert(0, sys._MEIPASS)
-
 from PyQt6.QtGui import QIcon, QShortcut, QKeySequence
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWebEngineCore import QWebEngineProfile
 
-from core.overlay import OverlayManager
+from core.overlay import MiniTimer
 from core.timer_window import TimerWindow
 from core.tray import SystemTray
 from core.window import MainWindow
@@ -55,7 +52,7 @@ class AppController:
         self._app.setQuitOnLastWindowClosed(False)
         self._services = self._create_services()
         self._wire_service_events()
-        self._window = MainWindow(api_base_url=self._api_base_url, devtools_enabled=self._devtools_enabled)
+        self._window = MainWindow(api_base_url=self._api_base_url)
         self._local_api = LocalApiService(
             self._api_base_url,
             self._logger,
@@ -64,19 +61,17 @@ class AppController:
         self._timer_window = TimerWindow(
             api_base_url=self._api_base_url,
             shared_profile=self._extract_web_profile(),
-            interface_dir=None,  # Set to None or a valid path as needed
+            interface_dir=None,
             events=self._services.events,
             request_handler=self._handle_api_request,
-            devtools_enabled=False,
         )
         self._bridge = JSBridge(self._window.web_view, self._services.events, self._handle_api_request)
         self._tray = SystemTray(self._app, self._window, self._services.events)
-        self._overlay = OverlayManager(self._services.events)
+        self._overlay = MiniTimer()
         self._wire_shutdown()
 
         # Overlay/focus window logic
         self._timer_window.window_state_changed.connect(self._on_focus_window_state)
-        self._timer_window.focusChanged = self._on_focus_window_focus
         self._shortcut_overlay = QShortcut(QKeySequence("Ctrl+Alt+D"), self._window)
         self._shortcut_overlay.activated.connect(self._on_overlay_shortcut)
 
@@ -125,21 +120,20 @@ class AppController:
         events.on("timer:complete", lambda _payload: self._end_session(sessions))
         events.on("ui:theme", self._handle_ui_theme)
 
-    def _extract_web_profile(self) -> QWebEngineProfile | None:
+    def _extract_web_profile(self) -> QWebEngineProfile:
         web_view = getattr(self._window, "web_view", None)
         if web_view is None:
-            return None
-        page_getter = getattr(web_view, "page", None)
-        if not callable(page_getter):
-            return None
-        page = page_getter()
+            raise RuntimeError("web_view not initialized")
+
+        page = web_view.page()
         if page is None:
-            return None
-        profile_getter = getattr(page, "profile", None)
-        if not callable(profile_getter):
-            return None
-        profile = profile_getter()
-        return profile if isinstance(profile, QWebEngineProfile) else None
+            raise RuntimeError("page not initialized")
+
+        profile = page.profile()
+        if not isinstance(profile, QWebEngineProfile):
+            raise RuntimeError("Invalid profile")
+
+        return profile
 
     def _shutdown_services(self) -> None:
         self._timer_window.shutdown_webengine()
