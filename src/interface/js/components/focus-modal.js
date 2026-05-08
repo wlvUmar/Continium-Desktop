@@ -499,7 +499,12 @@ window.closeFocusModal = async function() {
     const isWindowMode = !!window.__focusWindowMode;
 
     if (_focusTimerRunning) {
-        window.focusToggle();
+        clearInterval(_focusTimerInterval);
+        _focusTimerRunning = false;
+        const _pb = document.getElementById('focusPlayBtn');
+        if (_pb) _pb.classList.add('paused');
+        _focusSetPlayButtonState(false);
+        _focusStopRingAnimation();
     }
 
     if (_focusTimerElapsed > _focusSessionStart) {
