@@ -112,18 +112,19 @@ jobs:
 
 # ---------------- RELEASE ----------------
   release:
-    needs: [windows, linux, macos]
+    needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
         with:
           path: release
 
-      - name: Publish GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: manual-${{ github.run_number }}
+          name: Manual build ${{ github.run_number }}
           files: |
-            release/windows-installer/ContiniumSetup.exe
-            release/linux-package/**
-            release/mac-installer/Continium.dmg
+            release/**/*
