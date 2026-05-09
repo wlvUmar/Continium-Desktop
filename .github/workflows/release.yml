@@ -112,7 +112,7 @@ jobs:
 
 # ---------------- RELEASE ----------------
   release:
-    needs: [build-windows, build-linux, build-macos]
+    needs: [windows, linux, macos]
     runs-on: ubuntu-latest
 
     steps:
