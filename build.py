@@ -1,169 +1,164 @@
 """
-Build script for creating desktop installers
+Production build script for Continium Desktop
+- PyInstaller onedir builds (installer-friendly)
+- Clean resource handling
+- Cross-platform support
 """
-import os
+
+from __future__ import annotations
+
 import sys
+import os
 import shutil
 import platform
 import subprocess
 from pathlib import Path
 
 
+APP_NAME = "Continium"
+
+
 class Builder:
     def __init__(self):
-        self.root_dir = Path(__file__).resolve().parent
-        self.dist_dir = self.root_dir / "dist"
-        self.build_dir = self.root_dir / "build"
+        self.root = Path(__file__).resolve().parent
+        self.src = self.root / "src"
+        self.dist = self.root / "dist"
+        self.build_dir = self.root / "build"
 
+    # ---------------------------
+    # CLEAN
+    # ---------------------------
     def clean(self):
-        """Clean build artifacts"""
         print("Cleaning build artifacts...")
-        for dir_path in [self.dist_dir, self.build_dir]:
-            if dir_path.exists():
-                try:
-                    shutil.rmtree(dir_path)
-                except PermissionError as e:
-                    print(f"PermissionError: Could not delete {dir_path}. {e}")
-                    print("Ensure the file is not in use and try again.")
 
-    def _icon_arg(self, icon_path: Path) -> list[str]:
-        """Return a PyInstaller icon flag when the icon file exists."""
-        if icon_path.exists():
-            return [f"--icon={icon_path.resolve()}"]
-        print(f"Icon not found, building without it: {icon_path}")
-        return []
+        for path in [self.dist, self.build_dir]:
+            if path.exists():
+                shutil.rmtree(path)
 
-    def _data_arg(self, source: Path, target: str) -> str:
-        """Format a PyInstaller data argument for the current platform."""
-        return f"{source.resolve()}{os.pathsep}{target}"
-
-    def _pyinstaller_cmd(self) -> list[str]:
-        """Return the PyInstaller invocation for the active interpreter."""
+    # ---------------------------
+    # HELPERS
+    # ---------------------------
+    def pyinstaller(self):
         return [sys.executable, "-m", "PyInstaller"]
 
+    def data(self, src: Path, dest: str) -> str:
+        return f"{src.resolve()}{os.pathsep}{dest}"
+
+    def icon(self) -> list[str]:
+        ico = self.root / "resources" / "icon.ico"
+        if ico.exists():
+            return [f"--icon={ico.resolve()}"]
+        return []
+
+    # ---------------------------
+    # WINDOWS BUILD
+    # ---------------------------
     def build_windows(self):
-        """Build Windows installer"""
-        print("Building Windows installer...")
+        print("Building Windows (onedir)...")
 
         cmd = [
-            *self._pyinstaller_cmd(),
-            "--name=Continium",
-            "--windowed",
-            "--onefile",
-            *self._icon_arg(self.root_dir / "resources" / "icon.ico"),
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'interface', 'src/interface')}",
-            f"--add-data={self._data_arg(self.root_dir / 'resources', 'resources')}",
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'core', 'core')}",
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'dal', 'dal')}",
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'services', 'services')}",
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'utils', 'utils')}",
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'models', 'models')}",
-            "--hidden-import=core",
-            "--hidden-import=dal",
-            "--hidden-import=services",
-            "--hidden-import=utils",
-            "--hidden-import=models",
-            f"--paths={self.root_dir / 'src'}",
-            str(self.root_dir / "src" / "main.py"),
-        ]
+            *self.pyinstaller(),
 
-        print("Adding data paths:")
-        print(f"Interface: {self._data_arg(self.root_dir / 'src' / 'interface', 'src/interface')}")
-        print(f"Resources: {self._data_arg(self.root_dir / 'resources', 'resources')}")
-        print(f"Core: {self._data_arg(self.root_dir / 'src' / 'core', 'core')}")
-        print(f"DAL: {self._data_arg(self.root_dir / 'src' / 'dal', 'dal')}")
-        print(f"Services: {self._data_arg(self.root_dir / 'src' / 'services', 'services')}")
-        print(f"Utils: {self._data_arg(self.root_dir / 'src' / 'utils', 'utils')}")
-        print(f"Models: {self._data_arg(self.root_dir / 'src' / 'models', 'models')}")
-
-        subprocess.run(cmd, check=True, cwd=self.root_dir)
-
-    def build_macos(self):
-        """Build macOS installer"""
-        print("Building macOS installer...")
-
-        cmd = [
-            *self._pyinstaller_cmd(),
+            # core settings
             "--name=Continium",
             "--windowed",
             "--onedir",
-            *self._icon_arg(self.root_dir / "resources" / "icon.icns"),
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'interface', 'interface')}",
-            f"--add-data={self._data_arg(self.root_dir / 'resources', 'resources')}",
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'core', 'core')}",
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'dal', 'dal')}",
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'services', 'services')}",
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'utils', 'utils')}",
-            f"--add-data={self._data_arg(self.root_dir / 'src' / 'models', 'models')}",
+
+            # icon
+            *self.icon(),
+
+            # main entry
+            str(self.src / "main.py"),
+
+            # interface (frontend)
+            f"--add-data={self.data(self.src / 'interface', 'interface')}",
+
+            # resources
+            f"--add-data={self.data(self.root / 'resources', 'resources')}",
+
+            # backend modules
+            f"--add-data={self.data(self.src / 'core', 'core')}",
+            f"--add-data={self.data(self.src / 'dal', 'dal')}",
+            f"--add-data={self.data(self.src / 'services', 'services')}",
+            f"--add-data={self.data(self.src / 'utils', 'utils')}",
+            f"--add-data={self.data(self.src / 'models', 'models')}",
+
+            # import hints
             "--hidden-import=core",
             "--hidden-import=dal",
             "--hidden-import=services",
             "--hidden-import=utils",
             "--hidden-import=models",
-            f"--paths={self.root_dir / 'src'}",
-            str(self.root_dir / "src" / "main.py"),
+
+            # correct import root
+            f"--paths={self.src}",
         ]
 
-        subprocess.run(cmd, check=True, cwd=self.root_dir)
+        subprocess.run(cmd, check=True, cwd=self.root)
 
-        # Create DMG
-        self._create_dmg()
-
-    def _create_dmg(self):
-        """Create DMG installer for macOS"""
-        app_path = self.dist_dir / "Continium.app"
-        dmg_path = self.dist_dir / "Continium.dmg"
-
-        if not app_path.exists():
-            print("App bundle not found, skipping DMG creation")
-            return
+    # ---------------------------
+    # MACOS BUILD
+    # ---------------------------
+    def build_macos(self):
+        print("Building macOS (onedir)...")
 
         cmd = [
-            "hdiutil", "create",
-            "-volname", "Continium",
-            "-srcfolder", str(app_path),
-            "-ov", "-format", "UDZO",
-            str(dmg_path)
+            *self.pyinstaller(),
+            "--name=Continium",
+            "--windowed",
+            "--onedir",
+            *self.icon(),
+            str(self.src / "main.py"),
+
+            f"--add-data={self.data(self.src / 'interface', 'interface')}",
+            f"--add-data={self.data(self.root / 'resources', 'resources')}",
+            f"--add-data={self.data(self.src / 'core', 'core')}",
+            f"--add-data={self.data(self.src / 'dal', 'dal')}",
+            f"--add-data={self.data(self.src / 'services', 'services')}",
+            f"--add-data={self.data(self.src / 'utils', 'utils')}",
+            f"--add-data={self.data(self.src / 'models', 'models')}",
+
+            "--hidden-import=core",
+            "--hidden-import=dal",
+            "--hidden-import=services",
+            "--hidden-import=utils",
+            "--hidden-import=models",
+
+            f"--paths={self.src}",
         ]
 
-        try:
-            subprocess.run(cmd, check=True, cwd=self.root_dir)
-            print(f"DMG created: {dmg_path}")
-        except subprocess.CalledProcessError:
-            print("DMG creation failed")
-    
-    def build(self, target_platform=None):
-        """Build for specified platform"""
-        if target_platform is None:
-            target_platform = platform.system().lower()
+        subprocess.run(cmd, check=True, cwd=self.root)
+
+    # ---------------------------
+    # RUN
+    # ---------------------------
+    def build(self, target=None):
+        target = target or platform.system().lower()
 
         self.clean()
 
-        if target_platform == "windows":
+        if target == "windows":
             self.build_windows()
-        elif target_platform == "darwin" or target_platform == "macos":
+        elif target in ("darwin", "macos"):
             self.build_macos()
         else:
-            print(f"Unsupported platform: {target_platform}")
-            sys.exit(1)
+            raise ValueError(f"Unsupported platform: {target}")
 
-        print(f"\nBuild complete! Check the dist/ folder")
+        print("\nBuild complete → check dist/")
 
 
 if __name__ == "__main__":
     import argparse
-    
-    parser = argparse.ArgumentParser(description="Build Continium Desktop")
-    parser.add_argument("--platform", choices=["windows", "macos", "darwin"], 
-                       help="Target platform (default: current platform)")
-    parser.add_argument("--clean", action="store_true", 
-                       help="Only clean build artifacts")
-    
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--platform", choices=["windows", "macos"])
+    parser.add_argument("--clean", action="store_true")
+
     args = parser.parse_args()
-    
-    builder = Builder()
-    
+
+    b = Builder()
+
     if args.clean:
-        builder.clean()
+        b.clean()
     else:
-        builder.build(args.platform)
+        b.build(args.platform)

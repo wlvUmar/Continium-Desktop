@@ -7,21 +7,20 @@ from pathlib import Path
 APP_NAME = "Continium"
 
 
+import sys
+
 def project_root() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS)
     return Path(__file__).resolve().parents[2]
 
 
 def interface_dir() -> Path:
-    """Return the HTML interface directory for source and packaged layouts."""
     root = project_root()
-    candidates = [
-        root / "interface",      # PyInstaller bundle layout
-        root / "src" / "interface",  # Source-tree layout
-    ]
-    for candidate in candidates:
-        if (candidate / "index.html").exists():
-            return candidate
-    return candidates[0]
+    path = root / "interface"
+    if (path / "index.html").exists():
+        return path
+    raise FileNotFoundError("interface/index.html not found")
 
 
 def resource_dir() -> Path:

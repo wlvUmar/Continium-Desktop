@@ -1,20 +1,3 @@
-/**
- * PomodoroStateMachine — manages work / short-break / long-break cycles.
- *
- * States:  idle → work → short-break → work → ... → long-break → work → ...
- * After every CYCLES_BEFORE_LONG_BREAK work sessions a long break is triggered.
- *
- * Usage:
- *   const p = new PomodoroStateMachine();
- *   p.on('tick',        (timeRemaining) => { ... });
- *   p.on('stateChange', (state)         => { ... });
- *   p.on('cycleComplete', (cycleCount)  => { ... });
- *   p.toggle(); // start / pause
- *   p.skip();   // skip to next state
- *   p.reset();  // back to idle
- *   p.destroy(); // cleanup on view teardown
- */
-
 export default class PomodoroStateMachine {
     static WORK_DURATION           = 25 * 60;   // seconds
     static SHORT_BREAK_DURATION    = 5  * 60;
@@ -32,7 +15,6 @@ export default class PomodoroStateMachine {
 
     // ── Public API ────────────────────────────────────────────────────────────
 
-    /** Start or pause the timer. */
     toggle() {
         if (this._state === 'idle' || this._state === 'paused') {
             this._start();
@@ -41,13 +23,11 @@ export default class PomodoroStateMachine {
         }
     }
 
-    /** Skip the current session and move to the next state immediately. */
     skip() {
         this._stopInterval();
         this._advance();
     }
 
-    /** Reset everything back to the initial idle state. */
     reset() {
         this._stopInterval();
         this._state         = 'idle';
@@ -58,12 +38,10 @@ export default class PomodoroStateMachine {
         this._emit('tick', this._timeRemaining);
     }
 
-    /** Register an event listener. Events: 'tick', 'stateChange', 'cycleComplete'. */
     on(event, fn) {
         this._callbacks[event] = fn;
     }
 
-    /** Stop the interval (call on view cleanup). */
     destroy() {
         this._stopInterval();
     }
@@ -110,7 +88,6 @@ export default class PomodoroStateMachine {
         }
     }
 
-    /** Move to the next logical state after current session ends. */
     _advance() {
         this._stopInterval();
 

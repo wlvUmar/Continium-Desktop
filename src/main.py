@@ -9,7 +9,7 @@ from PyQt6.QtGui import QIcon, QShortcut, QKeySequence
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtWebEngineCore import QWebEngineProfile
 
-from core.overlay import MiniTimer
+from core.overlay import MiniTimer, OverlayManager
 from core.timer_window import TimerWindow
 from core.tray import SystemTray
 from core.window import MainWindow
@@ -39,13 +39,16 @@ class AppController:
         self._api_base_url = os.getenv("CONTINIUM_API_BASE_URL", "https://continium.uz/api/v1").strip() or None
         self._verify_remote_auth_ssl = _env_bool("CONTINIUM_AUTH_VERIFY_SSL", True)
         self._devtools_enabled = False
+
         if self._api_base_url:
             self._logger.info("Configured API base URL: %s", self._api_base_url)
         else:
             self._logger.warning("CONTINIUM_API_BASE_URL is not set; remote auth is unavailable")
         if not self._verify_remote_auth_ssl:
             self._logger.warning("Remote auth SSL verification is disabled")
+
         init_db()
+
         self._app = QApplication(sys.argv)
         self._app.setApplicationName("Continium")
         self._app.setWindowIcon(_load_app_icon())
@@ -67,7 +70,7 @@ class AppController:
         )
         self._bridge = JSBridge(self._window.web_view, self._services.events, self._handle_api_request)
         self._tray = SystemTray(self._app, self._window, self._services.events)
-        self._overlay = MiniTimer()
+        self._overlay = OverlayManager(self._services.events)
         self._wire_shutdown()
 
         # Overlay/focus window logic
