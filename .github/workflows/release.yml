@@ -1,13 +1,25 @@
-name: Build Release
+name: Build Multi Platform
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: Continium-Windows
+          - os: ubuntu-latest
+            artifact: Continium-Linux
+          - os: macos-latest
+            artifact: Continium-macOS
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
@@ -18,22 +30,52 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install system deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            libegl1 \
+            libxcb-cursor0 \
+            libxkbcommon-x11-0 \
+            libglu1-mesa
+
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build app
+      - name: Build
         run: python build.py
 
-      - name: Install Inno Setup
-        run: choco install innosetup -y
+      - name: Archive build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/
 
-      - name: Build installer
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Zip artifacts
         run: |
-          iscc installer.iss
+          cd artifacts
+          zip -r Continium-Windows.zip Continium-Windows
+          zip -r Continium-Linux.zip Continium-Linux
+          zip -r Continium-macOS.zip Continium-macOS
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: installer/ContiniumSetup.exe
+          files: |
+            artifacts/Continium-Windows.zip
+            artifacts/Continium-Linux.zip
+            artifacts/Continium-macOS.zip

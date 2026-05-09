@@ -144,7 +144,7 @@ class Builder:
         else:
             raise ValueError(f"Unsupported platform: {target}")
 
-        print("\nBuild complete → check dist/")
+        print("\nBuild complete - check dist/")
 
 
 if __name__ == "__main__":
