@@ -17,12 +17,18 @@ def project_root() -> Path:
 
 def interface_dir() -> Path:
     root = project_root()
-    path = root / "interface"
-    if (path / "index.html").exists():
-        return path
-    raise FileNotFoundError("interface/index.html not found")
 
+    candidates = [
+        root / "src" / "interface",
+        root / "interface",
+    ]
 
+    for path in candidates:
+        if (path / "index.html").exists():
+            return path
+
+    raise FileNotFoundError(f"interface/index.html not found in {root}")
+    
 def resource_dir() -> Path:
     """Return the packaged static resource directory."""
     return project_root() / "resources"
