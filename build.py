@@ -128,6 +128,26 @@ class Builder:
         ]
 
         subprocess.run(cmd, check=True, cwd=self.root)
+        
+    def build_linux(self):
+        print("Building Linux (onedir)...")
+
+        cmd = [
+            *self.pyinstaller(),
+            "--name=Continium",
+            "--windowed",
+            "--onedir",
+            str(self.src / "main.py"),
+            f"--add-data={self.data(self.src / 'interface', 'interface')}",
+            f"--add-data={self.data(self.root / 'resources', 'resources')}",
+            f"--add-data={self.data(self.src / 'core', 'core')}",
+            f"--add-data={self.data(self.src / 'dal', 'dal')}",
+            f"--add-data={self.data(self.src / 'services', 'services')}",
+            f"--add-data={self.data(self.src / 'utils', 'utils')}",
+            f"--add-data={self.data(self.src / 'models', 'models')}",
+        ]
+
+        subprocess.run(cmd, check=True, cwd=self.root)
 
     # ---------------------------
     # RUN
@@ -141,6 +161,8 @@ class Builder:
             self.build_windows()
         elif target in ("darwin", "macos"):
             self.build_macos()
+        elif target in ("linux", "linux2"):
+            self.build_linux()
         else:
             raise ValueError(f"Unsupported platform: {target}")
 

@@ -1,4 +1,4 @@
-name: Build Multi Platform
+name: Build & Release
 
 on:
   workflow_dispatch:
@@ -7,75 +7,110 @@ on:
       - "v*"
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            artifact: Continium-Windows
-          - os: ubuntu-latest
-            artifact: Continium-Linux
-          - os: macos-latest
-            artifact: Continium-macOS
-
-    runs-on: ${{ matrix.os }}
+  build-windows:
+    runs-on: windows-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install system deps (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            libegl1 \
-            libxcb-cursor0 \
-            libxkbcommon-x11-0 \
-            libglu1-mesa
-
-      - name: Install dependencies
+      - name: Install deps
         run: |
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build
-        run: python build.py
+      - name: Build app
+        run: python build.py --platform windows
 
-      - name: Archive build
+      - name: Install Inno Setup
+        run: choco install innosetup -y
+
+      - name: Build installer
+        run: iscc installer.iss
+
+      - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: dist/
+          name: windows-installer
+          path: installer/ContiniumSetup.exe
 
-  release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+
+  build-linux:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
-          path: artifacts
+          python-version: "3.12"
 
-      - name: Zip artifacts
+      - name: Install deps
         run: |
-          cd artifacts
-          zip -r Continium-Windows.zip Continium-Windows
-          zip -r Continium-Linux.zip Continium-Linux
-          zip -r Continium-macOS.zip Continium-macOS
+          sudo apt update
+          sudo apt install -y libegl1 libxkbcommon-x11-0
+          pip install -r requirements.txt
+          pip install pyinstaller
 
-      - name: Create Release
+      - name: Build app
+        run: python build.py --platform linux
+
+      - name: Upload Linux build
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-app
+          path: dist/
+
+
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller pillow
+
+      - name: Build app
+        run: python build.py --platform macos
+
+      - name: Create DMG
+        run: |
+          hdiutil create \
+            -volname Continium \
+            -srcfolder dist/Continium.app \
+            -ov -format UDZO \
+            Continium.dmg
+
+      - name: Upload macOS dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-installer
+          path: Continium.dmg
+
+
+  release:
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/Continium-Windows.zip
-            artifacts/Continium-Linux.zip
-            artifacts/Continium-macOS.zip
+            release/windows-installer/ContiniumSetup.exe
+            release/linux-app/**
+            release/mac-installer/Continium.dmg
