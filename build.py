@@ -128,7 +128,7 @@ class Builder:
         ]
 
         subprocess.run(cmd, check=True, cwd=self.root)
-        
+
     def build_linux(self):
         print("Building Linux (onedir)...")
 
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--platform", choices=["windows", "macos"])
+    parser.add_argument("--platform", choices=["windows", "macos", "linux"])
     parser.add_argument("--clean", action="store_true")
 
     args = parser.parse_args()

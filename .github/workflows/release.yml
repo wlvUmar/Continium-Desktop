@@ -7,7 +7,9 @@ on:
       - "v*"
 
 jobs:
-  build-windows:
+
+# ---------------- WINDOWS ----------------
+  windows:
     runs-on: windows-latest
 
     steps:
@@ -38,7 +40,8 @@ jobs:
           path: installer/ContiniumSetup.exe
 
 
-  build-linux:
+# ---------------- LINUX ----------------
+  linux:
     runs-on: ubuntu-latest
 
     steps:
@@ -51,21 +54,30 @@ jobs:
       - name: Install deps
         run: |
           sudo apt update
-          sudo apt install -y libegl1 libxkbcommon-x11-0
+          sudo apt install -y libegl1 libxkbcommon-x11-0 fuse
           pip install -r requirements.txt
           pip install pyinstaller
 
       - name: Build app
         run: python build.py --platform linux
 
-      - name: Upload Linux build
+      - name: Build AppImage (simple approach placeholder)
+        run: |
+          mkdir -p AppDir
+          cp -r dist/Continium/* AppDir/
+
+          # NOTE: real AppImage tool should be added later
+          tar -czf Continium-Linux.tar.gz AppDir
+
+      - name: Upload Linux package
         uses: actions/upload-artifact@v4
         with:
-          name: linux-app
-          path: dist/
+          name: linux-package
+          path: Continium-Linux.tar.gz
 
 
-  build-macos:
+# ---------------- MACOS ----------------
+  macos:
     runs-on: macos-latest
 
     steps:
@@ -98,8 +110,9 @@ jobs:
           path: Continium.dmg
 
 
+# ---------------- RELEASE ----------------
   release:
-    needs: [build-windows, build-linux, build-macos]
+    needs: [windows, linux, macos]
     runs-on: ubuntu-latest
 
     steps:
@@ -107,10 +120,10 @@ jobs:
         with:
           path: release
 
-      - name: Create GitHub Release
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             release/windows-installer/ContiniumSetup.exe
-            release/linux-app/**
+            release/linux-package/**
             release/mac-installer/Continium.dmg
